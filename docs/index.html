@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ramp: pump.fun curve math. know when it bonds.</title>
+<meta name="description" content="pump.fun curve math. know when it bonds. Exact buy and sell quotes, a dev-buy planner, a seeded launch sim and bundle math. CLI, MCP server and local dashboard, zero dependencies.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ramp">
+<meta property="og:url" content="https://rampcli.dev/">
+<meta property="og:title" content="ramp: pump.fun curve math. know when it bonds.">
+<meta property="og:description" content="Paste a pump.fun coin and see its live bonding curve: progress, SOL left until it bonds, and exact buy and sell quotes.">
+<meta property="og:image" content="https://rampcli.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ramp: pump.fun curve math. know when it bonds.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ramp: pump.fun curve math. know when it bonds.">
+<meta name="twitter:description" content="Paste a pump.fun coin and see its live bonding curve: progress, SOL left until it bonds, and exact buy and sell quotes.">
+<meta name="twitter:image" content="https://rampcli.dev/og.png">
+<meta name="theme-color" content="#0B1F14">
+<script>if (/[?&](mint|token)=/.test(location.search)) document.documentElement.classList.add('has-mint');</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22%23B6F23A%22%3E%3Cpath%20d%3D%22M8%2079.86V74.32C42.32%2071.82%2067.95%2056.95%2090.57%2020.61Q91.45%2019.73%2092%2020.14V79.86Z%22%2F%3E%3Ccircle%20cx%3D%2244.19%22%20cy%3D%2243.95%22%20r%3D%2217.78%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+<style>
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/dm-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/dm-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+:root {
+  --bg: #0B1F14; --panel: #10291B; --raised: #163523; --inset: #0D2318;
+  --line: rgba(255, 255, 255, .08); --line-2: rgba(255, 255, 255, .14); --line-lime: rgba(182, 242, 58, .10);
+  --text: #EAF5EC; --muted: #8AA394; --faint: #5E7A69;
+  --accent: #B6F23A; --accent-hover: #C8F86A; --on-accent: #0B1F14;
+  --up: #B6F23A; --down: #FF6B5B;
+  --sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r: 10px; --r-sm: 6px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 500 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-weight: 800; letter-spacing: -.02em; margin: 0; }
+img.icon { display: block; border-radius: 22%; flex: none; }
+svg.mark { display: block; flex: none; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.label { font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.kicker { font: 500 12px/1 var(--mono); color: var(--muted); letter-spacing: .02em; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); height: 40px; padding: 0 var(--s4); border-radius: var(--r-sm); border: 1px solid var(--line-2); background: transparent; color: var(--text); font: 700 14px/1 var(--sans); cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s, color .12s; }
+.btn:hover { border-color: var(--muted); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { cursor: progress; opacity: .55; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-sm { height: 32px; padding: 0 var(--s3); font-size: 13px; }
+
+/* inputs */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span { font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.field input, .field select { width: 100%; height: 36px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 var(--s3); font: 400 13px var(--mono); font-variant-numeric: tabular-nums; transition: border-color .12s; }
+.field input:hover { border-color: var(--line-2); }
+.field input:focus { outline: none; border-color: var(--accent); }
+.field input:invalid, .field input[aria-invalid=true] { border-color: var(--down); }
+.slider { display: flex; flex-direction: column; gap: var(--s2); }
+.slider[hidden] { display: none; }
+.slider label { display: flex; justify-content: space-between; align-items: baseline; font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.slider label b { font: 500 13px var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--fill, 0%), var(--raised) var(--fill, 0%)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--raised); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--text); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--line-2); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 3px solid var(--bg); }
+input[type=range]:hover::-webkit-slider-thumb { background: var(--accent); }
+input[type=range]:focus-visible { outline: none; }
+input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--accent); }
+
+/* stat cells: label on top, big mono number, small note */
+.cells { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.cell { background: var(--panel); padding: var(--s4); min-width: 0; }
+.cell > span { display: block; font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.cell > b { display: block; margin-top: var(--s2); font: 400 22px/1.15 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell > small { display: block; margin-top: var(--s1); font: 400 12px/1.4 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell > b.key { color: var(--accent); }
+
+/* charts */
+.chart-svg { display: block; width: 100%; height: auto; }
+.chart-svg text { font: 400 11px var(--mono); fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font: 500 12px var(--sans); color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+
+/* progress bar */
+.bar { height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .2s; }
+
+/* status line under forms */
+.status { min-height: 18px; margin: 0; font: 400 12px/1.5 var(--mono); color: var(--muted); }
+.status.err { color: var(--down); }
+.status:empty { display: none; }
+
+/* playground: chart card on the left, order ticket on the right */
+.pg { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s4); align-items: stretch; }
+.pg-main { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.pg-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px); gap: var(--s5); align-items: end; padding: var(--s5) var(--s5) var(--s4); }
+.pg-price .label { display: block; margin-bottom: var(--s2); }
+.pg-price .big { display: flex; align-items: baseline; gap: var(--s2); font: 400 44px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; white-space: nowrap; }
+.pg-price .big small { font: 400 16px var(--mono); color: var(--muted); letter-spacing: 0; }
+.pg-price .sub { display: block; margin-top: var(--s2); font: 400 13px var(--mono); color: var(--muted); }
+.pg-prog .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--s2); }
+.pg-prog .row b { font: 500 15px var(--mono); }
+.pg-prog .foot { margin-top: var(--s2); font: 400 12px var(--mono); color: var(--muted); }
+.pg-chart { flex: 1; position: relative; min-height: 300px; margin: 0 var(--s3) var(--s2); }
+.pg-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pg-legend { padding: 0 var(--s5) var(--s4); }
+.pg-main .cells { border: 0; border-top: 1px solid var(--line); border-radius: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pg-ticket { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s5); }
+.pg-ticket h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; display: flex; justify-content: space-between; align-items: baseline; }
+.pg-ticket h3 span { font: 400 12px var(--mono); color: var(--muted); letter-spacing: 0; }
+.pg-tt { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); }
+.pg-tt-note { font: 400 12px var(--mono); color: var(--muted); }
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.seg button { height: 30px; min-width: 64px; padding: 0 var(--s3); border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: 700 13px/1 var(--sans); cursor: pointer; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--raised); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+input[type=range]:disabled { cursor: default; opacity: .7; }
+.is-live #pg-raised-l { color: var(--text); }
+.pg-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+.pg-out { border-top: 1px solid var(--line); padding-top: var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+.pg-get span { display: block; font: 500 12px var(--sans); color: var(--muted); }
+.pg-get b { display: block; margin-top: var(--s2); font: 400 36px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--accent); white-space: nowrap; }
+.pg-get small { display: block; margin-top: var(--s2); font: 400 12px var(--mono); color: var(--muted); }
+.kv { display: flex; justify-content: space-between; gap: var(--s3); font-size: 13px; color: var(--muted); }
+.kv b { font: 400 13px var(--mono); color: var(--text); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-cmd { display: flex; flex-direction: column; gap: var(--s2); }
+.pg-cmd code { display: block; font-size: 12px; line-height: 1.6; color: var(--muted); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--s2) var(--s3); overflow-wrap: anywhere; }
+.pg-adv { border-top: 1px solid var(--line); padding-top: var(--s4); }
+.pg-adv summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; font: 500 13px var(--sans); color: var(--muted); }
+.pg-adv summary::-webkit-details-marker { display: none; }
+.pg-adv summary::after { content: "+"; font: 400 14px var(--mono); }
+.pg-adv[open] summary::after { content: "-"; }
+.pg-adv summary:hover { color: var(--text); }
+.pg-adv .pg-row { margin-top: var(--s4); }
+@media (max-width: 1080px) {
+  .pg { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .pg-chart { min-height: 240px; }
+  .pg-head { grid-template-columns: minmax(0, 1fr); gap: var(--s4); padding: var(--s4); }
+  .pg-price .big { font-size: 34px; }
+  .pg-legend { padding: 0 var(--s4) var(--s4); }
+  .pg-main .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pg-ticket { padding: var(--s4); }
+  .cell > b { font-size: 18px; }
+}
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--s5); }
+.nav { height: 64px; display: flex; align-items: center; gap: var(--s6); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 800 21px/1 var(--sans); letter-spacing: -.03em; }
+.brand:hover { text-decoration: none; }
+.nav .links { display: flex; gap: var(--s5); font-size: 14px; }
+.nav .links a { color: var(--muted); }
+.nav .links a:hover { color: var(--text); text-decoration: none; }
+.nav .btn { margin-left: auto; }
+
+.hero { padding: var(--s7) 0 var(--s4); }
+.hero-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: var(--s6); align-items: end; margin-bottom: var(--s5); }
+.tick { display: inline-flex; align-items: center; gap: var(--s2); font: 400 13px var(--mono); color: var(--muted); }
+.tick b { color: var(--accent); font-weight: 500; }
+.tick i { width: 1px; height: 12px; background: var(--line-2); }
+.hero h1 { margin: var(--s3) 0 0; font-size: clamp(40px, 5vw, 68px); line-height: .98; white-space: nowrap; letter-spacing: -.045em; font-weight: 800; }
+.hero h1 span { color: var(--muted); }
+.lead { margin: 0; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.lead b { color: var(--text); font-weight: 500; }
+.mint { display: flex; align-items: center; gap: var(--s2); height: 64px; padding: 0 var(--s2) 0 var(--s4); }
+.mint:focus-within { border-color: rgba(182, 242, 58, .45); }
+.mint .pre { font: 400 13px var(--mono); color: var(--faint); white-space: nowrap; }
+.mint input { flex: 1; min-width: 0; height: 100%; background: transparent; border: 0; color: var(--text); font: 400 16px var(--mono); letter-spacing: -.01em; }
+.mint input::placeholder { color: var(--faint); }
+.mint input:focus { outline: none; }
+.mint input[aria-invalid=true] { color: var(--down); }
+.mint .btn { height: 46px; padding: 0 var(--s5); font-size: 15px; }
+.mint-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin-top: var(--s3); font-size: 13px; color: var(--muted); }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font: 500 13px var(--mono); cursor: pointer; }
+.linkish:hover { text-decoration: underline; text-underline-offset: 3px; }
+.linkish:disabled { color: var(--muted); cursor: progress; text-decoration: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.live { margin: 0 0 var(--s4); padding: var(--s4) var(--s5) var(--s4); display: flex; flex-direction: column; gap: var(--s4); }
+.live[hidden] { display: none; }
+.has-mint .live[hidden] { display: flex; min-height: 196px; }
+.lv-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3) var(--s4); flex-wrap: wrap; }
+.lv-id { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+.lv-id img, .lv-ph { width: 40px; height: 40px; border-radius: 50%; flex: none; background: var(--raised); object-fit: cover; }
+.lv-ph { display: grid; place-items: center; }
+.lv-ph svg { width: 22px; height: 22px; }
+.lv-name { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lv-name strong { font-size: 17px; font-weight: 700; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-name em { font: 400 14px var(--mono); font-style: normal; color: var(--muted); }
+.lv-mint { align-self: flex-start; background: none; border: 0; padding: 0; font: 400 12px var(--mono); color: var(--muted); cursor: copy; }
+.lv-mint:hover { color: var(--text); }
+.lv-chip { margin-left: var(--s2); font: 400 11px var(--mono); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 4px 8px; white-space: nowrap; color: var(--muted); }
+.lv-chip.on { color: var(--accent); border-color: rgba(182, 242, 58, .35); }
+.lv-chip.on::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
+.lv-chip.done { color: var(--text); }
+.lv-tools { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.lv-note { font: 400 12px var(--mono); color: var(--muted); }
+.lv-cells { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lv-cells .cell > b { font-size: 26px; }
+.lv-cells .bar { display: block; margin-top: 6px; }
+.lv-lead { margin: 0; color: var(--muted); font-size: 15px; max-width: 70ch; }
+.lv-foot { margin: 0; font: 400 12px/1.5 var(--mono); color: var(--muted); }
+.lv-foot code { color: var(--text); }
+.lv-msg { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); flex-wrap: wrap; }
+.lv-msg strong { display: block; font-size: 16px; font-weight: 700; }
+.lv-msg p { margin: var(--s1) 0 0; font: 400 13px/1.5 var(--mono); color: var(--muted); }
+.lv-msg.err strong { color: var(--down); }
+.live[data-state=error] { border-color: rgba(255, 107, 91, .35); }
+.sk { display: block; border-radius: 4px; background: linear-gradient(90deg, var(--raised) 0, #1c3f2b 50%, var(--raised) 100%); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+@keyframes sk { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.sk-av { width: 40px; height: 40px; border-radius: 50%; }
+.sk-t { width: 160px; height: 16px; }
+.sk-s { width: 90px; height: 11px; margin-top: 4px; }
+.sk-l { width: 70%; height: 11px; }
+.sk-b { width: 55%; height: 24px; margin: 2px 0; }
+.has-mint .live[hidden]::before { content: ""; display: block; height: 164px; border-radius: 6px; background: linear-gradient(90deg, var(--raised) 0, #1c3f2b 50%, var(--raised) 100%); background-size: 200% 100%; animation: sk 1.2s linear infinite; opacity: .5; }
+.install { display: flex; align-items: center; gap: var(--s3); max-width: 480px; height: 52px; padding: 0 6px 0 var(--s4); background: var(--inset); border: 1px solid var(--line-2); border-radius: var(--r); margin-top: var(--s4); }
+.install code { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow-x: auto; }
+.install code::before { content: "$ "; color: var(--faint); }
+
+.strip { margin-top: var(--s7); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.strip div { padding: var(--s5) var(--s5) var(--s5) 0; }
+.strip div + div { padding-left: var(--s5); border-left: 1px solid var(--line); }
+.strip b { display: block; font: 400 30px/1.1 var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.strip b.key { color: var(--accent); }
+.strip span { display: block; margin-top: var(--s2); font-size: 13px; color: var(--muted); }
+
+section { padding: var(--s8) 0 0; scroll-margin-top: 16px; }
+.head { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s6); margin-bottom: var(--s6); align-items: baseline; }
+.head .kicker { padding-top: 6px; }
+.head h2 { font-size: clamp(28px, 3.6vw, 40px); line-height: 1.05; letter-spacing: -.035em; }
+.head p { margin: var(--s3) 0 0; color: var(--muted); font-size: 16px; max-width: 40em; }
+.head p code { white-space: nowrap; color: var(--text); }
+
+.cmds { border-top: 1px solid var(--line); }
+.cmd { display: grid; grid-template-columns: 280px minmax(0, 1fr) minmax(0, 330px); gap: var(--s6); padding: var(--s5) 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.cmd h3 { font: 500 16px var(--mono); letter-spacing: 0; color: var(--accent); }
+.cmd p { margin: 0; color: var(--muted); font-size: 15px; }
+.cmd code { font-size: 13px; color: var(--text); white-space: nowrap; overflow-x: auto; display: block; }
+.cmd:hover { background: linear-gradient(90deg, transparent, rgba(182, 242, 58, .03), transparent); }
+
+.term { background: var(--inset); border: 1px solid var(--line-2); border-radius: var(--r); overflow: hidden; min-width: 0; }
+.term .tb { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 var(--s4); border-bottom: 1px solid var(--line); font: 400 12px var(--mono); color: var(--muted); }
+.term .tb span:first-child { color: var(--text); }
+.term pre { margin: 0; padding: var(--s4) var(--s5) var(--s5); font: 400 13px/1.65 var(--mono); color: #C4D6C9; overflow-x: auto; }
+.term .p { color: var(--faint); }
+.term .c { color: var(--accent); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
+.tools { margin: 0; padding: 0; list-style: none; }
+.tools li { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--s4); padding: var(--s4) var(--s5); border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.tools li:last-child { border-bottom: 0; }
+.tools b { font: 500 13px var(--mono); color: var(--text); }
+
+.faq { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s6); border-top: 1px solid var(--line); }
+.faq details { border-bottom: 1px solid var(--line); padding: var(--s5) 0; }
+.faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: var(--s4); font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 400 18px/1 var(--mono); color: var(--muted); }
+.faq details[open] summary::after { content: "-"; color: var(--accent); }
+.faq summary:hover { color: var(--accent); }
+.faq p { margin: var(--s3) 0 0; color: var(--muted); font-size: 15px; }
+
+.end { margin-top: var(--s8); padding: var(--s7) 0; border-top: 1px solid var(--line); display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; }
+.end h2 { font-size: 32px; letter-spacing: -.035em; flex: 1; min-width: 240px; }
+footer { padding: var(--s5) 0 var(--s6); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; font: 400 12px var(--mono); color: var(--muted); }
+footer a { color: var(--muted); }
+
+@media (max-width: 1080px) {
+  .hero-top { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+  .lv-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .head { grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
+  .cmd { grid-template-columns: 200px minmax(0, 1fr); }
+  .cmd code { grid-column: 2; }
+  .two { grid-template-columns: minmax(0, 1fr); }
+  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .strip div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .strip div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 0 var(--s4); }
+  .nav { gap: var(--s4); }
+  .nav .links { display: none; }
+  .hero { padding: var(--s5) 0 var(--s3); }
+  .hero-top { margin-bottom: var(--s4); }
+  .hero h1 { white-space: normal; font-size: clamp(36px, 10vw, 44px); }
+  .lead { font-size: 15px; }
+  .mint { height: auto; flex-wrap: wrap; padding: var(--s2); gap: var(--s2); }
+  .mint .pre { display: none; }
+  .mint input { flex: 1 1 100%; height: 44px; padding: 0 var(--s2); font-size: 14px; }
+  .mint .btn { flex: 1 1 100%; height: 44px; }
+  .live { padding: var(--s4); }
+  .lv-top { align-items: flex-start; }
+  .lv-chip { margin-left: 0; }
+  .lv-id { flex-wrap: wrap; }
+  .lv-cells .cell > b { font-size: 19px; }
+  .has-mint .live[hidden] { min-height: 330px; }
+  .strip div, .strip div + div { padding: var(--s4) var(--s3) var(--s4) 0; }
+  .strip div:nth-child(even) { padding-left: var(--s3); }
+  .strip b { font-size: 22px; }
+  section { padding-top: var(--s7); }
+  .cmd { grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
+  .cmd code { grid-column: 1; }
+  .tools li { grid-template-columns: minmax(0, 1fr); gap: var(--s1); padding: var(--s4); }
+  .faq { grid-template-columns: minmax(0, 1fr); }
+  .term pre { font-size: 12px; padding: var(--s4); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="mark" width="22" height="22" role="img" aria-label="ramp"><g fill="#B6F23A"><path d="M8 79.86V74.32C42.32 71.82 67.95 56.95 90.57 20.61Q91.45 19.73 92 20.14V79.86Z"/><circle cx="44.19" cy="43.95" r="17.78"/></g></svg>ramp</a>
+    <div class="links"><a href="#live-form">Live curve</a><a href="#commands">Commands</a><a href="#mcp">MCP</a><a href="#faq">FAQ</a></div>
+    <a class="btn btn-sm" href="https://github.com/OWNER/ramp">GitHub</a>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-top">
+      <div>
+        <span class="tick"><b>$RAMP</b><i></i>pump.fun curve math<i></i>v1.1.0</span>
+        <h1>know when it bonds.</h1>
+      </div>
+      <p class="lead">Paste a pump.fun mint. ramp reads its bonding curve on chain and runs the exact math: <b>progress to bond, SOL left, what a buy or sell gets you</b>. No mint? Drag the model.</p>
+    </div>
+    <form class="mint panel" id="live-form" autocomplete="off">
+      <label class="sr" for="mint">pump.fun mint address</label>
+      <span class="pre">mint</span>
+      <input id="mint" name="mint" type="text" inputmode="text" spellcheck="false" autocapitalize="off" placeholder="paste a pump.fun mint, the address ending in pump">
+      <button class="btn btn-primary" id="live-go" type="submit">Load curve</button>
+    </form>
+    <div class="mint-sub"><button type="button" class="linkish" id="live-example">try with a live coin from pump.fun</button><span>reads only, never asks for a wallet or a key.</span></div>
+  </header>
+
+  <section id="live" class="live panel" hidden aria-live="polite" aria-label="Live curve"></section>
+  <div id="playground"></div>
+
+  <div class="strip">
+    <div><b>85.01 SOL</b><span>net SOL in the curve when it bonds</span></div>
+    <div><b>410.88 SOL</b><span>mcap the moment it bonds</span></div>
+    <div><b class="key">1.4811 SOL</b><span>dev buy to own 5% at launch, fee incl.</span></div>
+    <div><b>1.39x</b><span>supply 8 bundled wallets grab vs spread</span></div>
+  </div>
+
+  <section id="commands">
+    <div class="head"><span class="kicker">01 / commands</span><div><h2>one CLI, ten commands.</h2><p>The same math in your terminal. Zero dependencies, works offline, every command takes <code>--json</code>.</p><div class="install"><code id="cmd">npx ramp-cli plan --own 5%</code><button class="btn btn-sm" id="copy" type="button">Copy</button></div></div></div>
+    <div class="cmds">
+      <div class="cmd"><h3>state</h3><p>Price, mcap, curve progress and SOL left until it bonds, from any point on the curve.</p><code>ramp state --raised 40</code></div>
+      <div class="cmd"><h3>buy / sell</h3><p>Tokens out, avg price, price impact and mcap after, fee included. Capped where it bonds.</p><code>ramp buy 2 --from-raised 40</code></div>
+      <div class="cmd"><h3>plan</h3><p>Dev-buy planner: SOL to own a share, SOL raised to hit an mcap, or what a budget buys along the curve.</p><code>ramp plan --own 5%</code></div>
+      <div class="cmd"><h3>sim</h3><p>Seeded Monte Carlo with snipers, a dev buy and random flow. Odds it bonds, sniper and top 10 share.</p><code>ramp sim --snipers 10 --seed 42</code></div>
+      <div class="cmd"><h3>bundle</h3><p>N wallets in the launch slot vs the same SOL spread out, wallet by wallet.</p><code>ramp bundle --wallets 8 --each 0.5</code></div>
+      <div class="cmd"><h3>snipe</h3><p>Buyers one after another at launch, and how much less the last one gets.</p><code>ramp snipe --buyers 5 --each 1</code></div>
+      <div class="cmd"><h3>chart</h3><p>ASCII chart in the terminal, or price vs SOL raised as an SVG.</p><code>ramp chart --svg curve.svg</code></div>
+      <div class="cmd"><h3>ui</h3><p>Local dashboard with this playground, the sim and the bundle check. Prints a URL, opens nothing.</p><code>ramp ui --port 4178</code></div>
+      <div class="cmd"><h3>mcp</h3><p>Model Context Protocol server over stdio for Claude, Cursor and other agents.</p><code>ramp mcp</code></div>
+      <div class="cmd"><h3>--rpc --mint</h3><p>Live mode: derives the bonding curve PDA, reads the account over any RPC, decodes the reserves.</p><code>ramp state --rpc URL --mint MINT</code></div>
+    </div>
+  </section>
+
+  <section id="output">
+    <div class="head"><span class="kicker">02 / output</span><div><h2>plain text you can paste.</h2><p>Real runs with the default parameters. Add <code>--json</code> to pipe it somewhere.</p></div></div>
+    <div class="term"><div class="tb"><span>ramp</span><span>example output from a real run</span></div><pre><span class="p">$</span> <span class="c">ramp plan --own 5%</span>
+Own 5% of supply at launch (fee 1%)
+  Spend           1.4811 SOL, fee 0.0148 SOL
+  Tokens out      50,000,000.04 (5.0000% of supply)
+  Avg price       0.00000002962 SOL
+  Price impact    +5.95%
+  Market cap      27.96 SOL -&gt; 30.76 SOL
+  Progress after  6.30%
+
+<span class="p">$</span> <span class="c">ramp plan --target-mcap 50000 --sol-price 150</span>
+Reach a market cap of $50,000
+  SOL raised needed   73.5857 SOL net in the curve
+  From here           73.5857 SOL net, 74.329 SOL with fee
+  Progress at target  96.11%
+  Tokens sold         762,242,860.1
+  Graduation mcap     $61,632</pre></div>
+  </section>
+
+  <section id="mcp">
+    <div class="head"><span class="kicker">03 / agents</span><div><h2>ramp speaks MCP.</h2><p><code>ramp mcp</code> starts a Model Context Protocol server over stdio. Add it to Claude Desktop, Claude Code or Cursor and ask it to quote, plan or simulate.</p></div></div>
+    <div class="two">
+      <div class="term"><div class="tb"><span>claude_desktop_config.json</span><span>json</span></div><pre>{
+  "mcpServers": {
+    "ramp": {
+      "command": "npx",
+      "args": ["-y", "ramp-cli", "mcp"]
+    }
+  }
+}</pre></div>
+      <ul class="tools panel">
+        <li><b>curve_state</b>Price, mcap, progress and SOL left until it bonds. Live with a mint.</li>
+        <li><b>quote_buy</b>Exact result of a buy, fee included.</li>
+        <li><b>quote_sell</b>Exact SOL out for a sell, after the fee.</li>
+        <li><b>plan_dev_buy</b>Own X%, hit an mcap, or compare a budget along the curve.</li>
+        <li><b>simulate_launch</b>Seeded Monte Carlo: odds it bonds and holder concentration.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="head"><span class="kicker">04 / faq</span><div><h2>questions.</h2></div></div>
+    <div class="faq">
+      <details><summary>are these exactly what pump.fun charges?</summary><p>It is the constant-product formula with virtual reserves, done in lamports and token base units with BigInt. The defaults are the commonly cited pump.fun launch values. Fees and parameters change, so the fee and every reserve are flags, and live mode reads the real reserves from the account.</p></details>
+      <details><summary>is the sim a prediction?</summary><p>No. It is a model with assumptions you can change (buy sizes, sell share, new wallet share). Use it to compare setups, like 5 snipers vs 20. It does not forecast a specific launch.</p></details>
+      <details><summary>do I need an RPC or an API key?</summary><p>No. The CLI runs offline, and its live mode takes any Solana RPC URL with <code>--rpc</code>. On this site, the curve PDA is derived and the account is decoded in your browser; the read goes through a small proxy that only allows <code>getAccountInfo</code>.</p></details>
+      <details><summary>what does the site show for a coin that bonded?</summary><p>That it bonded, and its DexScreener pair: price, market cap, liquidity and 24h volume. Dollar values next to SOL use the SOL price DexScreener implies, so they are estimates.</p></details>
+      <details><summary>does it send transactions?</summary><p>No. ramp only reads and does math. It never asks for a private key.</p></details>
+      <details><summary>why is the npm package called ramp-cli?</summary><p><code>ramp</code> is taken on npm. The command it installs is <code>ramp</code>.</p></details>
+      <details><summary>other launchpads?</summary><p>Any constant-product curve with virtual reserves works: pass the parameters as flags or a config file. Live mode only decodes the pump.fun account layout.</p></details>
+    </div>
+  </section>
+
+  <div class="end"><h2>run the numbers before you send it.</h2><a class="btn btn-primary" href="https://github.com/OWNER/ramp">Get ramp on GitHub</a></div>
+  <footer><span>ramp v1.1.0, MIT licensed. Not financial advice.</span><a href="https://github.com/OWNER/ramp">github.com/OWNER/ramp</a></footer>
+</div>
+<script>
+const M = (() => {
+// Ramp math: an exact constant-product bonding curve with virtual reserves.
+// Pure ESM with no imports and no Node built-ins, so this exact file runs in Node
+// and is inlined into the browser playground (docs/index.html and `ramp ui`).
+// Reserves are BigInt in base units (lamports, token base units) so trades never drift.
+
+class CurveError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'CurveError';
+  }
+}
+
+const SOL_DECIMALS = 9;
+const TOKEN_DECIMALS = 6;
+const PPM = 1_000_000n; // fee precision: parts per million (1% = 10,000)
+
+/** Parse a decimal string or number into BigInt base units (truncates extra decimals). */
+function parseUnits(value, decimals, name = 'value') {
+  let s;
+  if (typeof value === 'bigint') return value * 10n ** BigInt(decimals);
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0) throw new CurveError(`${name} must be a non-negative number, got ${value}`);
+    s = value.toFixed(Math.min(decimals, 20));
+  } else {
+    s = String(value ?? '').trim().replace(/[_,]/g, '');
+  }
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(s)) throw new CurveError(`${name} must be a non-negative number, got "${value}"`);
+  let [int, frac = ''] = s.split('.');
+  frac = frac.slice(0, decimals).padEnd(decimals, '0');
+  return BigInt((int || '0') + frac);
+}
+
+/** Format BigInt base units as an exact decimal string. */
+function formatUnits(value, decimals) {
+  const neg = value < 0n;
+  const abs = neg ? -value : value;
+  const base = 10n ** BigInt(decimals);
+  const frac = (abs % base).toString().padStart(decimals, '0').replace(/0+$/, '');
+  return (neg ? '-' : '') + (abs / base).toString() + (frac ? '.' + frac : '');
+}
+
+const toNumber = (value, decimals) => Number(formatUnits(value, decimals));
+const ceilDiv = (a, b) => (a + b - 1n) / b;
+
+/** Integer square root (floor) of a non-negative BigInt. */
+function bigSqrt(n) {
+  if (n < 2n) return n;
+  let x = BigInt(Math.floor(Math.sqrt(Number(n))));
+  while (x * x > n) x = (x + n / x) / 2n;
+  while ((x + 1n) * (x + 1n) <= n) x += 1n;
+  return x;
+}
+
+const sol = (v) => toNumber(v, SOL_DECIMALS);
+const tok = (v) => toNumber(v, TOKEN_DECIMALS);
+const lamports = (n) => BigInt(Math.round(n * 1e9));
+
+/** Commonly cited Pump.fun launch parameters. All of them can be overridden. */
+const DEFAULTS = Object.freeze({
+  supply: 1_000_000_000,
+  virtualTokens: 1_073_000_000,
+  virtualSol: 30,
+  curveTokens: 793_100_000,
+  fee: 1,
+});
+
+const PRESETS = Object.freeze({ pumpfun: DEFAULTS });
+const PARAM_KEYS = Object.freeze(['virtualSol', 'virtualTokens', 'curveTokens', 'supply', 'fee']);
+
+/**
+ * Resolve curve parameters: preset, then config (for preset "custom"), then explicit overrides.
+ * `config` is a plain object with any of PARAM_KEYS.
+ */
+function resolveParams({ preset = 'pumpfun', config = null, overrides = {} } = {}) {
+  let base;
+  if (preset === 'custom') {
+    if (!config) throw new CurveError('preset "custom" needs a config (JSON with virtualSol, virtualTokens, curveTokens, supply, fee)');
+    base = { ...DEFAULTS };
+  } else if (PRESETS[preset]) {
+    base = { ...PRESETS[preset] };
+  } else {
+    throw new CurveError(`unknown preset "${preset}", use one of: ${[...Object.keys(PRESETS), 'custom'].join(', ')}`);
+  }
+  for (const src of [config || {}, overrides]) {
+    for (const [key, value] of Object.entries(src)) {
+      if (value === undefined || value === null) continue;
+      if (!PARAM_KEYS.includes(key)) throw new CurveError(`unknown curve parameter "${key}", expected one of: ${PARAM_KEYS.join(', ')}`);
+      base[key] = value;
+    }
+  }
+  return base;
+}
+
+/**
+ * Constant-product bonding curve with virtual reserves.
+ * Instances are immutable: buy() and sell() return the next curve in `result.curve`.
+ */
+class Curve {
+  constructor(params = {}, state = null) {
+    const p = { ...DEFAULTS };
+    for (const [key, value] of Object.entries(params)) if (value !== undefined) p[key] = value;
+    this.params = Object.freeze(p);
+    this.supply = parseUnits(p.supply, TOKEN_DECIMALS, 'supply');
+    this.initialVirtualTokens = parseUnits(p.virtualTokens, TOKEN_DECIMALS, 'virtual tokens');
+    this.initialVirtualSol = parseUnits(p.virtualSol, SOL_DECIMALS, 'virtual SOL');
+    this.curveTokens = parseUnits(p.curveTokens, TOKEN_DECIMALS, 'curve tokens');
+    this.feePpm = parseUnits(p.fee, 4, 'fee');
+    if (this.supply === 0n) throw new CurveError('supply must be greater than 0');
+    if (this.initialVirtualSol === 0n) throw new CurveError('virtual SOL must be greater than 0');
+    if (this.curveTokens === 0n) throw new CurveError('curve tokens must be greater than 0');
+    if (this.curveTokens >= this.initialVirtualTokens) throw new CurveError('curve tokens must be less than virtual tokens');
+    if (this.curveTokens > this.supply) throw new CurveError('curve tokens cannot exceed supply');
+    if (this.feePpm >= PPM) throw new CurveError('fee must be below 100%');
+    this.k = this.initialVirtualSol * this.initialVirtualTokens;
+    this.virtualSol = state ? state.virtualSol : this.initialVirtualSol;
+    this.virtualTokens = state ? state.virtualTokens : this.initialVirtualTokens;
+    this.realTokens = state ? state.realTokens : this.curveTokens;
+    Object.freeze(this);
+  }
+
+  // Fast path: copy validated parameters, swap reserves. Used for every trade.
+  _next(state) {
+    const c = Object.create(Curve.prototype);
+    for (const key of ['params', 'supply', 'initialVirtualTokens', 'initialVirtualSol', 'curveTokens', 'feePpm', 'k']) c[key] = this[key];
+    c.virtualSol = state.virtualSol;
+    c.virtualTokens = state.virtualTokens;
+    c.realTokens = state.realTokens;
+    return Object.freeze(c);
+  }
+
+  clone() {
+    return this._next({ virtualSol: this.virtualSol, virtualTokens: this.virtualTokens, realTokens: this.realTokens });
+  }
+
+  /** Curve with explicit reserves in base units (BigInt), for example from an on-chain account. */
+  withReserves({ virtualSol, virtualTokens, realTokens }) {
+    if (virtualTokens <= realTokens) throw new CurveError('virtual token reserves must exceed real token reserves');
+    return this._next({ virtualSol, virtualTokens, realTokens });
+  }
+
+  /** Curve after `amount` SOL (net of fees) has gone into it from launch. */
+  withRaised(amount) {
+    const net = parseUnits(amount, SOL_DECIMALS, 'raised SOL');
+    const v0 = this.initialVirtualSol;
+    const t0 = this.initialVirtualTokens;
+    const out = (t0 * net) / (v0 + net);
+    if (out > this.curveTokens) {
+      throw new CurveError(`raised SOL exceeds the graduation amount (${fmt(sol(ceilDiv(v0 * this.curveTokens, t0 - this.curveTokens)))} SOL)`);
+    }
+    return this._next({ virtualSol: v0 + net, virtualTokens: t0 - out, realTokens: this.curveTokens - out });
+  }
+
+  /** Curve after `amount` tokens have been bought from launch. */
+  withSold(amount) {
+    const sold = parseUnits(amount, TOKEN_DECIMALS, 'sold tokens');
+    if (sold > this.curveTokens) throw new CurveError(`sold tokens exceed the tokens on the curve (${fmt(tok(this.curveTokens))})`);
+    const vt = this.initialVirtualTokens - sold;
+    return this._next({ virtualSol: ceilDiv(this.k, vt), virtualTokens: vt, realTokens: this.curveTokens - sold });
+  }
+
+  get solRaised() { return this.virtualSol - this.initialVirtualSol; }
+  get tokensSold() { return this.curveTokens - this.realTokens; }
+  get complete() { return this.realTokens === 0n; }
+  /** Spot price in SOL per whole token. */
+  get price() { return sol(this.virtualSol) / tok(this.virtualTokens); }
+  get marketCap() { return this.price * tok(this.supply); }
+
+  _grossFor(net) { return ceilDiv(net * PPM, PPM - this.feePpm); }
+  _netToGraduate() {
+    return this.realTokens === 0n ? 0n : ceilDiv(this.virtualSol * this.realTokens, this.virtualTokens - this.realTokens);
+  }
+
+  state() {
+    const netLamports = this._netToGraduate();
+    const gradPrice = sol(this.virtualSol + netLamports) / tok(this.virtualTokens - this.realTokens);
+    return {
+      solRaised: sol(this.solRaised),
+      tokensSold: tok(this.tokensSold),
+      soldPctOfSupply: pct(this.tokensSold, this.supply),
+      progressPct: pct(this.tokensSold, this.curveTokens),
+      price: this.price,
+      marketCap: this.marketCap,
+      solToGraduate: sol(netLamports),
+      solToGraduateWithFee: sol(this._grossFor(netLamports)),
+      graduationPrice: gradPrice,
+      graduationMarketCap: gradPrice * tok(this.supply),
+      complete: this.complete,
+      virtualSol: sol(this.virtualSol),
+      virtualTokens: tok(this.virtualTokens),
+      tokensLeftOnCurve: tok(this.realTokens),
+      feePct: Number(this.feePpm) / 10_000,
+    };
+  }
+
+  /** Core buy on base units. Returns raw BigInt amounts and the next curve. */
+  _buyRaw(gross) {
+    let used = gross;
+    let fee = (gross * this.feePpm) / PPM;
+    let net = gross - fee;
+    let out = (this.virtualTokens * net) / (this.virtualSol + net);
+    let capped = false;
+    if (out >= this.realTokens) {
+      capped = true;
+      out = this.realTokens;
+      net = ceilDiv(this.virtualSol * out, this.virtualTokens - out);
+      used = this._grossFor(net);
+      if (used > gross) used = gross;
+      fee = used - net;
+    }
+    const next = this._next({ virtualSol: this.virtualSol + net, virtualTokens: this.virtualTokens - out, realTokens: this.realTokens - out });
+    return { used, fee, net, out, capped, next };
+  }
+
+  /** Core sell on base units. */
+  _sellRaw(amt) {
+    const gross = (this.virtualSol * amt) / (this.virtualTokens + amt);
+    const fee = (gross * this.feePpm) / PPM;
+    const next = this._next({ virtualSol: this.virtualSol - gross, virtualTokens: this.virtualTokens + amt, realTokens: this.realTokens + amt });
+    return { gross, fee, next };
+  }
+
+  /** Spend `amount` SOL (fee included). Buys past graduation are capped. */
+  buy(amount) {
+    const gross = parseUnits(amount, SOL_DECIMALS, 'SOL amount');
+    if (gross === 0n) throw new CurveError('SOL amount must be greater than 0');
+    if (this.complete) throw new CurveError('curve is complete (graduated), there are no tokens left to buy');
+    const { used, fee, net, out, capped, next } = this._buyRaw(gross);
+    if (out === 0n) throw new CurveError('SOL amount is too small to buy any tokens');
+    const avgPrice = sol(used) / tok(out);
+    return {
+      type: 'buy',
+      solIn: sol(used),
+      fee: sol(fee),
+      solNet: sol(net),
+      unusedSol: sol(gross - used),
+      tokensOut: tok(out),
+      supplyPct: pct(out, this.supply),
+      avgPrice,
+      priceBefore: this.price,
+      priceAfter: next.price,
+      priceImpactPct: (avgPrice / this.price - 1) * 100,
+      priceChangePct: (next.price / this.price - 1) * 100,
+      marketCapBefore: this.marketCap,
+      marketCapAfter: next.marketCap,
+      progressPctAfter: pct(next.tokensSold, next.curveTokens),
+      capped,
+      graduated: next.complete,
+      curve: next,
+    };
+  }
+
+  /** Sell `amount` tokens back into the curve. SOL out is after fee. */
+  sell(amount) {
+    const amt = parseUnits(amount, TOKEN_DECIMALS, 'token amount');
+    if (amt === 0n) throw new CurveError('token amount must be greater than 0');
+    if (amt > this.tokensSold) {
+      throw new CurveError(`cannot sell ${fmt(tok(amt))} tokens, only ${fmt(tok(this.tokensSold))} have been bought on this curve`);
+    }
+    const { gross, fee, next } = this._sellRaw(amt);
+    const avgPrice = sol(gross - fee) / tok(amt);
+    return {
+      type: 'sell',
+      tokensIn: tok(amt),
+      solGross: sol(gross),
+      fee: sol(fee),
+      solOut: sol(gross - fee),
+      avgPrice,
+      priceBefore: this.price,
+      priceAfter: next.price,
+      priceImpactPct: (1 - avgPrice / this.price) * 100,
+      priceChangePct: (next.price / this.price - 1) * 100,
+      marketCapBefore: this.marketCap,
+      marketCapAfter: next.marketCap,
+      curve: next,
+    };
+  }
+}
+
+/** Simulate `buyers` sequential buys of `each` SOL. Stops early if the curve graduates. */
+function snipe(curve, buyers, each) {
+  if (!Number.isInteger(buyers) || buyers < 1) throw new CurveError('buyers must be a positive integer');
+  const rows = [];
+  let c = curve;
+  let cumulative = 0;
+  for (let i = 1; i <= buyers && !c.complete; i++) {
+    const r = c.buy(each);
+    cumulative += r.supplyPct;
+    rows.push({
+      buyer: i, solIn: r.solIn, tokens: r.tokensOut, supplyPct: r.supplyPct, cumulativePct: cumulative,
+      entryMarketCap: r.marketCapBefore, avgMarketCap: r.avgPrice * tok(c.supply),
+    });
+    c = r.curve;
+  }
+  return {
+    rows,
+    totalSol: rows.reduce((s, r) => s + r.solIn, 0),
+    totalTokens: rows.reduce((s, r) => s + r.tokens, 0),
+    totalSupplyPct: cumulative,
+    graduated: c.complete,
+    curve: c,
+  };
+}
+
+/** Sample price and market cap against net SOL raised, from the curve's current state to graduation. */
+function chartPoints(curve, samples = 60) {
+  const start = sol(curve.solRaised);
+  const end = start + curve.state().solToGraduate;
+  const v0 = sol(curve.initialVirtualSol);
+  const k = v0 * tok(curve.initialVirtualTokens);
+  const supply = tok(curve.supply);
+  const points = [];
+  for (let i = 0; i < samples; i++) {
+    const raised = start + ((end - start) * i) / Math.max(1, samples - 1);
+    const vs = v0 + raised;
+    const price = (vs * vs) / k; // price = vS / vT = vS^2 / k
+    points.push({ raised, price, marketCap: price * supply });
+  }
+  return points;
+}
+
+// ---------------------------------------------------------------- planner
+
+/** How much SOL a buy at the current point needs to receive `ownPct` percent of total supply. */
+function planOwn(curve, ownPct) {
+  const p = Number(ownPct);
+  if (!Number.isFinite(p) || p <= 0 || p > 100) throw new CurveError(`ownership must be a percent between 0 and 100, got "${ownPct}"`);
+  if (curve.complete) throw new CurveError('curve is complete (graduated)');
+  const want = (curve.supply * BigInt(Math.round(p * 1e6))) / 100_000_000n;
+  if (want >= curve.realTokens) {
+    throw new CurveError(`${p}% of supply is more than the ${fmt(pct(curve.realTokens, curve.supply))}% left on the curve`);
+  }
+  const net = ceilDiv(curve.virtualSol * want, curve.virtualTokens - want);
+  const gross = curve._grossFor(net);
+  const r = curve.buy(formatUnits(gross, SOL_DECIMALS));
+  return {
+    targetPct: p,
+    solToSpend: r.solIn,
+    solNet: sol(net),
+    fee: r.fee,
+    tokensOut: r.tokensOut,
+    supplyPct: r.supplyPct,
+    avgPrice: r.avgPrice,
+    priceImpactPct: r.priceImpactPct,
+    marketCapBefore: r.marketCapBefore,
+    marketCapAfter: r.marketCapAfter,
+    progressPctAfter: r.progressPctAfter,
+  };
+}
+
+/**
+ * Net SOL that must be in the curve for its market cap (in SOL) to reach `targetMcapSol`.
+ * mcap_lamports = vS^2 * supply / k, so vS = sqrt(mcap_lamports * k / supply).
+ */
+function planTargetMcap(curve, targetMcapSol) {
+  const target = Number(targetMcapSol);
+  if (!Number.isFinite(target) || target <= 0) throw new CurveError(`target market cap must be a positive number, got "${targetMcapSol}"`);
+  const st = curve.state();
+  const base = { targetMarketCap: target, currentMarketCap: st.marketCap, graduationMarketCap: st.graduationMarketCap };
+  const vs = bigSqrt((lamports(target) * curve.k) / curve.supply);
+  const raisedNet = vs - curve.initialVirtualSol;
+  if (target <= st.marketCap) return { ...base, reachable: true, alreadyReached: true, solRaisedNeeded: sol(curve.solRaised), solToAdd: 0, solToAddWithFee: 0 };
+  if (target > st.graduationMarketCap) return { ...base, reachable: false, alreadyReached: false, solRaisedNeeded: null, solToAdd: null, solToAddWithFee: null };
+  const add = vs - curve.virtualSol;
+  const soldAt = curve.initialVirtualTokens - curve.k / vs;
+  return {
+    ...base,
+    reachable: true,
+    alreadyReached: false,
+    solRaisedNeeded: sol(raisedNet),
+    solToAdd: sol(add),
+    solToAddWithFee: sol(curve._grossFor(add)),
+    progressPctAt: pct(soldAt, curve.curveTokens),
+    tokensSoldAt: tok(soldAt),
+  };
+}
+
+/** What `budget` SOL buys at launch versus later points on the curve (net SOL raised). */
+function planBudget(curve, budget, points = [0, 20, 40, 60]) {
+  const rows = [];
+  for (const raised of points) {
+    let c;
+    try { c = curve.withRaised(raised); } catch { continue; }
+    if (c.complete) continue;
+    const r = c.buy(budget);
+    rows.push({
+      raised, tokensOut: r.tokensOut, supplyPct: r.supplyPct, avgPrice: r.avgPrice,
+      entryMarketCap: r.marketCapBefore, avgEntryMarketCap: r.avgPrice * tok(c.supply), priceImpactPct: r.priceImpactPct,
+      capped: r.capped,
+    });
+  }
+  const first = rows[0]?.tokensOut;
+  for (const row of rows) row.vsFirst = first ? row.tokensOut / first : null;
+  return { budget: Number(budget), rows };
+}
+
+// ---------------------------------------------------------------- bundles
+
+/**
+ * Compare N wallets buying `each` SOL in the launch slot (a bundle) against the same buys
+ * spread over time with `gapSol` of organic buying between each of them.
+ */
+function bundleCompare(curve, wallets, each, { gapSol = 2 } = {}) {
+  if (!Number.isInteger(wallets) || wallets < 1) throw new CurveError('wallets must be a positive integer');
+  const g = Number(gapSol);
+  if (!Number.isFinite(g) || g < 0) throw new CurveError('gap SOL must be zero or more');
+  const bundled = snipe(curve, wallets, each);
+  const spreadRows = [];
+  let c = curve;
+  let organic = 0;
+  for (let i = 0; i < wallets && !c.complete; i++) {
+    if (i > 0 && g > 0) {
+      const o = c.buy(g);
+      organic += o.solIn;
+      c = o.curve;
+      if (c.complete) break;
+    }
+    const r = c.buy(each);
+    spreadRows.push({ buyer: i + 1, solIn: r.solIn, tokens: r.tokensOut, supplyPct: r.supplyPct, entryMarketCap: r.marketCapBefore });
+    c = r.curve;
+  }
+  const sum = (rows, k) => rows.reduce((s, r) => s + r[k], 0);
+  const summary = (rows) => ({
+    wallets: rows.length,
+    sol: sum(rows, 'solIn'),
+    tokens: sum(rows, 'tokens'),
+    supplyPct: sum(rows, 'supplyPct'),
+    largestWalletPct: Math.max(...rows.map((r) => r.supplyPct)),
+    smallestWalletPct: Math.min(...rows.map((r) => r.supplyPct)),
+  });
+  const b = summary(bundled.rows);
+  const s = summary(spreadRows);
+  return {
+    each: Number(each),
+    gapSol: g,
+    bundled: { ...b, rows: bundled.rows.map(({ buyer, solIn, tokens, supplyPct, entryMarketCap }) => ({ buyer, solIn, tokens, supplyPct, entryMarketCap })) },
+    spread: { ...s, organicSol: organic, rows: spreadRows },
+    concentration: b.supplyPct / s.supplyPct,
+    extraPct: b.supplyPct - s.supplyPct,
+  };
+}
+
+// ---------------------------------------------------------------- simulator
+
+/** Hash a seed (number or string) into a 32 bit integer. */
+function seedFrom(seed) {
+  const s = String(seed);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** mulberry32: small, fast, deterministic PRNG returning floats in [0, 1). */
+function mulberry32(a) {
+  return function rand() {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SIM_DEFAULTS = Object.freeze({
+  runs: 200, snipers: 5, sniperSol: [1], devBuy: 1, maxTrades: 1000, within: 500,
+  minBuy: 0.05, maxBuy: 3, sellRatio: 0.35, sellJitter: 0.15, newWalletRatio: 0.7, seed: 1,
+});
+
+function quantile(sorted, q) {
+  if (!sorted.length) return null;
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))];
+}
+
+function stats(values) {
+  const v = [...values].sort((a, b) => a - b);
+  if (!v.length) return { mean: null, p10: null, p50: null, p90: null, min: null, max: null };
+  return {
+    mean: v.reduce((s, x) => s + x, 0) / v.length,
+    p10: quantile(v, 0.1), p50: quantile(v, 0.5), p90: quantile(v, 0.9), min: v[0], max: v[v.length - 1],
+  };
+}
+
+/**
+ * Monte Carlo launch simulation. Launch slot: dev buy, then `snipers` buys sized from `sniperSol`
+ * (cycled). Then up to `maxTrades` organic trades: buys are log-uniform between minBuy and maxBuy,
+ * a share of trades are sells of 25 to 100% of a random non-dev holder's bag. That share is drawn per run,
+ * uniformly within sellRatio +/- sellJitter, so some launches find demand and some stall.
+ * Fully deterministic for a given seed.
+ */
+function simulateLaunch(curve, options = {}) {
+  const o = { ...SIM_DEFAULTS, ...Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined)) };
+  const sizes = (Array.isArray(o.sniperSol) ? o.sniperSol : [o.sniperSol]).map(Number);
+  const checks = [
+    [Number.isInteger(o.runs) && o.runs >= 1 && o.runs <= 100_000, 'runs must be an integer from 1 to 100000'],
+    [Number.isInteger(o.snipers) && o.snipers >= 0, 'snipers must be a non-negative integer'],
+    [sizes.length > 0 && sizes.every((x) => Number.isFinite(x) && x > 0), 'sniper sizes must be positive numbers'],
+    [Number.isFinite(o.devBuy) && o.devBuy >= 0, 'dev buy must be zero or more'],
+    [Number.isInteger(o.maxTrades) && o.maxTrades >= 1, 'max trades must be a positive integer'],
+    [Number.isInteger(o.within) && o.within >= 1, 'within must be a positive integer'],
+    [o.minBuy > 0 && o.maxBuy >= o.minBuy, 'buy range must satisfy 0 < min-buy <= max-buy'],
+    [o.sellRatio >= 0 && o.sellRatio < 1, 'sell ratio must be at least 0 and below 1'],
+    [o.sellJitter >= 0 && o.sellJitter < 1, 'sell jitter must be at least 0 and below 1'],
+    [o.newWalletRatio >= 0 && o.newWalletRatio <= 1, 'new wallet ratio must be between 0 and 1'],
+  ];
+  for (const [ok, msg] of checks) if (!ok) throw new CurveError(msg);
+  if (curve.complete) throw new CurveError('curve is complete (graduated)');
+
+  const rand = mulberry32(seedFrom(o.seed));
+  const lnMin = Math.log(o.minBuy);
+  const lnSpan = Math.log(o.maxBuy) - lnMin;
+  const supply = curve.supply;
+  const runs = [];
+
+  for (let run = 0; run < o.runs; run++) {
+    let c = curve;
+    const sellP = Math.min(0.95, Math.max(0, o.sellRatio + (rand() * 2 - 1) * o.sellJitter));
+    const bal = new Map();
+    const add = (id, amt) => bal.set(id, (bal.get(id) || 0n) + amt);
+    const buy = (id, lam) => {
+      if (c.complete || lam <= 0n) return;
+      const r = c._buyRaw(lam);
+      if (r.out > 0n) { add(id, r.out); c = r.next; }
+    };
+    if (o.devBuy > 0) buy('dev', lamports(o.devBuy));
+    for (let i = 0; i < o.snipers; i++) buy(`s${i}`, lamports(sizes[i % sizes.length]));
+
+    const sellers = [...bal.keys()].filter((id) => id !== 'dev');
+    const organic = [];
+    let trades = 0;
+    let wallets = 0;
+    while (trades < o.maxTrades && !c.complete) {
+      trades++;
+      if (sellers.length && rand() < sellP) {
+        const idx = Math.floor(rand() * sellers.length);
+        const id = sellers[idx];
+        const have = bal.get(id);
+        const amt = rand() < 0.4 ? have : (have * BigInt(Math.floor((0.25 + 0.75 * rand()) * 1e6))) / 1_000_000n;
+        if (amt > 0n) {
+          c = c._sellRaw(amt).next;
+          const left = have - amt;
+          if (left > 0n) bal.set(id, left);
+          else { bal.delete(id); sellers[idx] = sellers[sellers.length - 1]; sellers.pop(); }
+        }
+      } else {
+        let id;
+        if (!organic.length || rand() < o.newWalletRatio) { id = `w${wallets++}`; organic.push(id); }
+        else id = organic[Math.floor(rand() * organic.length)];
+        const had = bal.has(id);
+        buy(id, lamports(Math.exp(lnMin + rand() * lnSpan)));
+        if (!had && bal.has(id)) sellers.push(id);
+      }
+    }
+    let snip = 0n;
+    for (const [id, v] of bal) if (id[0] === 's') snip += v;
+    const top = [...bal.values()].sort((a, b) => (a > b ? -1 : a < b ? 1 : 0)).slice(0, 10).reduce((s, v) => s + v, 0n);
+    runs.push({
+      graduated: c.complete,
+      trades,
+      sniperPct: pct(snip, supply),
+      devPct: pct(bal.get('dev') || 0n, supply),
+      top10Pct: pct(top, supply),
+      holders: bal.size,
+      solRaised: sol(c.solRaised),
+    });
+  }
+
+  const grad = runs.filter((r) => r.graduated);
+  return {
+    options: { ...o, sniperSol: sizes },
+    runs: o.runs,
+    graduated: grad.length,
+    graduationRate: grad.length / o.runs,
+    graduatedWithin: { trades: o.within, probability: grad.filter((r) => r.trades <= o.within).length / o.runs },
+    tradesToGraduate: stats(grad.map((r) => r.trades)),
+    sniperSharePct: stats(runs.map((r) => r.sniperPct)),
+    devSharePct: stats(runs.map((r) => r.devPct)),
+    top10SharePct: stats(runs.map((r) => r.top10Pct)),
+    holders: stats(runs.map((r) => r.holders)),
+    samples: runs,
+  };
+}
+
+/** Histogram helper for charts: `bins` equal-width buckets over the values. */
+function histogram(values, bins = 12, lo = null, hi = null) {
+  const v = values.filter((x) => Number.isFinite(x));
+  const min = lo ?? (v.length ? Math.min(...v) : 0);
+  const max = hi ?? (v.length ? Math.max(...v) : 1);
+  const width = (max - min) / bins || 1;
+  const counts = new Array(bins).fill(0);
+  for (const x of v) counts[Math.min(bins - 1, Math.max(0, Math.floor((x - min) / width)))]++;
+  return counts.map((count, i) => ({ from: min + i * width, to: min + (i + 1) * width, count }));
+}
+
+function pct(part, whole) {
+  return Number((part * 100_000_000n) / whole) / 1_000_000;
+}
+
+function fmt(n) {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+}
+
+return { CurveError, SOL_DECIMALS, TOKEN_DECIMALS, parseUnits, formatUnits, toNumber, ceilDiv, bigSqrt, DEFAULTS, PRESETS, PARAM_KEYS, resolveParams, Curve, snipe, chartPoints, planOwn, planTargetMcap, planBudget, bundleCompare, seedFrom, mulberry32, SIM_DEFAULTS, simulateLaunch, histogram };
+})();
+</script>
+<script>
+// Browser playground. Expects `M` (src/math.js, inlined) and a <div id="playground">.
+// Layout: price chart card on the left, a buy or sell ticket on the right. Every number comes from M.
+// Live mode: window.rampPlayground.setLive({ virtualSol, virtualTokens, realTokens, supply, mint, rpc })
+// pins the curve to real on-chain reserves (BigInt base units); clearLive() returns to the model.
+(function () {
+  const root = document.getElementById('playground');
+  if (!root) return;
+  const boot = window.RAMP_BOOT || {};
+  const P = Object.assign({}, M.DEFAULTS, boot.params || {});
+  const $ = (id) => root.querySelector('#' + id);
+  const n = (v, d = 2) => Number(v).toLocaleString('en-US', { maximumFractionDigits: d });
+  const fx = (v, d) => Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const usd = (v) => '$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: v >= 1000 ? 0 : 2 });
+  const sgn = (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  const BUY_MIN = 0.01, BUY_MAX = 50, SELL_MIN = 0.01, SELL_MAX = 200; // SOL, and millions of tokens
+  const logv = (lo, hi) => (t) => lo * Math.pow(hi / lo, t / 1000);
+  const logt = (lo, hi) => (v) => Math.round((Math.log(v / lo) / Math.log(hi / lo)) * 1000);
+  const toBuy = logv(BUY_MIN, BUY_MAX), fromBuy = logt(BUY_MIN, BUY_MAX);
+  const toSell = logv(SELL_MIN, SELL_MAX), fromSell = logt(SELL_MIN, SELL_MAX);
+  const num = (id, label, attrs) => `<label class="field"><span>${label}</span><input id="${id}" type="number" inputmode="decimal" ${attrs}></label>`;
+  let live = null;
+  let side = 'buy';
+
+  root.innerHTML = `
+  <div class="pg">
+    <div class="pg-main panel">
+      <div class="pg-head">
+        <div class="pg-price">
+          <span class="label">Spot price, SOL per 1M tokens</span>
+          <div class="big"><span id="s-price">0</span><small>SOL</small></div>
+          <span class="sub" id="s-price2"></span>
+        </div>
+        <div class="pg-prog">
+          <div class="row"><span class="label">Bonding progress</span><b id="s-bond">0%</b></div>
+          <div class="bar" role="progressbar" aria-label="Bonding progress" aria-valuemin="0" aria-valuemax="100"><i id="s-bar"></i></div>
+          <div class="foot" id="s-bond2"></div>
+        </div>
+      </div>
+      <div class="pg-chart"><svg id="pg-svg" class="chart-svg" viewBox="0 0 760 390" role="img" aria-label="Price versus SOL raised, launch to graduation"></svg></div>
+      <div class="legend pg-legend"><span><i style="background:var(--accent)"></i>price curve</span><span><i style="background:var(--text)"></i><span id="lg-now">coin now</span></span><span><i id="lg-band" style="background:var(--accent);opacity:.4"></i><span id="lg-trade">your buy</span></span><span><i style="background:transparent;box-shadow:inset 0 0 0 2px var(--accent);border-radius:50%"></i>bonds here</span></div>
+      <div class="cells">
+        <div class="cell"><span>Market cap</span><b id="s-mcap"></b><small id="s-mcap2"></small></div>
+        <div class="cell"><span>Mcap when it bonds</span><b id="s-grad"></b><small id="s-grad2"></small></div>
+        <div class="cell"><span id="s-after-l">Mcap after your buy</span><b id="s-after"></b><small id="s-after2"></small></div>
+        <div class="cell"><span>Price impact</span><b id="s-imp"></b><small>avg vs spot, fee incl.</small></div>
+      </div>
+    </div>
+    <form class="pg-ticket panel" id="pg-form" onsubmit="return false">
+      <div class="pg-tt">
+        <div class="seg" role="group" aria-label="Side"><button type="button" id="pg-side-buy" class="on" aria-pressed="true">Buy</button><button type="button" id="pg-side-sell" aria-pressed="false">Sell</button></div>
+        <span class="pg-tt-note">exact, fee incl.</span>
+      </div>
+      <div class="slider" id="pg-raised-w"><label for="pg-raised"><span id="pg-raised-l">SOL raised so far</span> <b id="pg-raised-v"></b></label><input id="pg-raised" type="range" min="0" max="85" step="0.1" value="${boot.raised ?? 0}"></div>
+      <div class="slider" id="pg-buy-w"><label for="pg-buy">Buy size <b id="pg-buy-v"></b></label><input id="pg-buy" type="range" min="0" max="1000" step="1" value="${fromBuy(boot.buy ?? 1)}"></div>
+      <div class="slider" id="pg-sell-w" hidden><label for="pg-sell">Sell size <b id="pg-sell-v"></b></label><input id="pg-sell" type="range" min="0" max="1000" step="1" value="${fromSell(10)}"></div>
+      <div class="slider"><label for="pg-fee">Fee <b id="pg-fee-v"></b></label><input id="pg-fee" type="range" min="0" max="5" step="0.05" value="${P.fee}"></div>
+      <div class="pg-row">
+        ${num('pg-solusd', 'SOL price (USD)', `min="0" step="1" value="${boot.solPrice ?? 150}"`)}
+        ${num('pg-own', 'Own % of supply', 'min="0.1" max="70" step="0.1" value="5"')}
+      </div>
+      <div class="pg-out">
+        <div class="pg-get"><span>You get</span><b id="s-out">0</b><small id="s-out2"></small></div>
+        <div class="kv"><span>Avg price / 1M</span><b id="s-avg"></b></div>
+        <div class="kv"><span>Price after</span><b id="s-pafter"></b></div>
+        <div class="kv"><span>Dev buy for <span id="s-ownpct">5%</span></span><b id="s-own"></b></div>
+      </div>
+      <div class="pg-cmd">
+        <code id="pg-cli" aria-label="Same quote from the CLI"></code>
+        <button class="btn" id="pg-copy" type="button">Copy CLI command</button>
+      </div>
+      <details class="pg-adv">
+        <summary>Curve parameters</summary>
+        <div class="pg-row">
+          ${num('pg-vs', 'Virtual SOL', `min="1" step="1" value="${P.virtualSol}"`)}
+          ${num('pg-vt', 'Virtual tokens (M)', `min="1" step="1" value="${P.virtualTokens / 1e6}"`)}
+        </div>
+        <div class="pg-row">
+          ${num('pg-ct', 'Curve tokens (M)', `min="1" step="0.1" value="${P.curveTokens / 1e6}"`)}
+          ${num('pg-sup', 'Supply (M)', `min="1" step="1" value="${P.supply / 1e6}"`)}
+        </div>
+      </details>
+      <p class="status err" id="pg-err" role="status" aria-live="polite"></p>
+    </form>
+  </div>`;
+
+  const ids = ['pg-raised', 'pg-buy', 'pg-sell', 'pg-fee', 'pg-solusd', 'pg-own', 'pg-vs', 'pg-vt', 'pg-ct', 'pg-sup'];
+  ids.forEach((id) => $(id).addEventListener('input', update));
+  $('pg-copy').addEventListener('click', async function () {
+    const btn = this;
+    try { await navigator.clipboard.writeText($('pg-cli').textContent); btn.textContent = 'Copied'; } catch (e) { btn.textContent = 'Select the line above'; }
+    setTimeout(() => { btn.textContent = 'Copy CLI command'; }, 1600);
+  });
+  function setSide(s) {
+    side = s;
+    $('pg-side-buy').classList.toggle('on', s === 'buy');
+    $('pg-side-sell').classList.toggle('on', s === 'sell');
+    $('pg-side-buy').setAttribute('aria-pressed', String(s === 'buy'));
+    $('pg-side-sell').setAttribute('aria-pressed', String(s === 'sell'));
+    $('pg-buy-w').hidden = s !== 'buy';
+    $('pg-sell-w').hidden = s !== 'sell';
+    update();
+  }
+  $('pg-side-buy').addEventListener('click', () => setSide('buy'));
+  $('pg-side-sell').addEventListener('click', () => setSide('sell'));
+
+  function params() {
+    return {
+      virtualSol: Number($('pg-vs').value), virtualTokens: Number($('pg-vt').value) * 1e6,
+      curveTokens: Number($('pg-ct').value) * 1e6, supply: Number($('pg-sup').value) * 1e6, fee: Number($('pg-fee').value),
+    };
+  }
+
+  function fill(el) {
+    const min = Number(el.min), max = Number(el.max), v = Number(el.value);
+    el.style.setProperty('--fill', (max > min ? ((v - min) / (max - min)) * 100 : 0) + '%');
+  }
+
+  function cli(p, raised, amount, sp) {
+    const parts = [side === 'buy' ? 'ramp buy' : 'ramp sell', side === 'buy' ? n(amount, amount < 1 ? 3 : 2).replace(/,/g, '') : String(Math.round(amount))];
+    if (live) parts.push('--mint', live.mint || 'MINT', '--rpc', live.rpc || 'https://api.mainnet-beta.solana.com');
+    else if (raised > 0) parts.push('--from-raised', String(Number(raised.toFixed(1))));
+    if (p.fee !== M.DEFAULTS.fee) parts.push('--fee', String(p.fee));
+    if (p.virtualSol !== M.DEFAULTS.virtualSol) parts.push('--virtual-sol', String(p.virtualSol));
+    if (p.virtualTokens !== M.DEFAULTS.virtualTokens) parts.push('--virtual-tokens', String(p.virtualTokens));
+    if (p.curveTokens !== M.DEFAULTS.curveTokens) parts.push('--curve-tokens', String(p.curveTokens));
+    if (!live && p.supply !== M.DEFAULTS.supply) parts.push('--supply', String(p.supply));
+    if (sp) parts.push('--sol-price', String(sp));
+    return parts.join(' ');
+  }
+
+  function blank(msg) {
+    ['s-out', 's-avg', 's-pafter', 's-after', 's-imp'].forEach((id) => { $(id).textContent = '-'; $(id).className = ''; });
+    $('s-out2').textContent = msg;
+    $('s-after2').textContent = '';
+  }
+
+  function update() {
+    const err = $('pg-err');
+    const p = params();
+    if (live) p.supply = live.supply;
+    let base;
+    try { base = new M.Curve(p); err.textContent = ''; root.classList.remove('is-error'); } catch (e) { err.textContent = e.message; root.classList.add('is-error'); return; }
+    const gs = base.state();
+    const slider = $('pg-raised');
+    const max = Math.max(0, Math.floor((gs.solToGraduate - 0.05) * 10) / 10);
+    if (Number(slider.max) !== max) slider.max = String(max);
+    let c;
+    try {
+      c = live ? base.withReserves(live) : base.withRaised(Math.min(Number(slider.value), max).toFixed(9));
+    } catch (e) { err.textContent = e.message; root.classList.add('is-error'); return; }
+    const s = c.state();
+    const raised = live ? s.solRaised : Math.min(Number(slider.value), max);
+    if (live) slider.value = String(Math.min(raised, max));
+    slider.disabled = !!live;
+    root.classList.toggle('is-live', !!live);
+    const sp = Number($('pg-solusd').value) || 0;
+    const fee = Number($('pg-fee').value);
+    ['pg-raised', 'pg-buy', 'pg-sell', 'pg-fee'].forEach((id) => fill($(id)));
+    $('pg-raised-l').textContent = live ? 'SOL raised, live on chain' : 'SOL raised so far';
+    $('pg-raised-v').textContent = fx(raised, live ? 3 : 1) + ' SOL';
+    $('pg-fee-v').textContent = fx(fee, 2) + '%';
+    const u = (v) => (sp ? usd(v * sp) : '');
+    $('s-price').textContent = fx(s.price * 1e6, 4);
+    $('s-price2').textContent = (sp ? usd(s.price * 1e6 * sp) + ' per 1M, ' : '') + 'mcap ' + n(s.marketCap) + ' SOL';
+    $('s-bond').textContent = fx(s.progressPct, 2) + '%';
+    $('s-bar').style.width = Math.min(100, s.progressPct) + '%';
+    root.querySelector('[role=progressbar]').setAttribute('aria-valuenow', s.progressPct.toFixed(2));
+    $('s-bond2').textContent = s.complete ? 'bonded, the curve is complete' : n(s.solToGraduateWithFee, 2) + ' SOL to go, fee incl.';
+    $('s-mcap').textContent = n(s.marketCap) + ' SOL';
+    $('s-mcap2').textContent = u(s.marketCap) || n(s.tokensSold / 1e6, 1) + 'M sold';
+    $('s-grad').textContent = n(s.graduationMarketCap) + ' SOL';
+    $('s-grad2').textContent = u(s.graduationMarketCap) || 'at ' + n(gs.solToGraduate, 2) + ' SOL raised';
+    $('lg-now').textContent = live ? 'you are here' : 'coin now';
+    $('lg-trade').textContent = side === 'buy' ? 'your buy' : 'your sell';
+    $('lg-band').style.background = side === 'buy' ? 'var(--accent)' : 'var(--down)';
+    $('s-after-l').textContent = side === 'buy' ? 'Mcap after your buy' : 'Mcap after your sell';
+    const own = Number($('pg-own').value);
+    $('s-ownpct').textContent = n(own, 2) + '%';
+    try { $('s-own').textContent = fx(M.planOwn(c, own).solToSpend, 4) + ' SOL'; } catch (e) { $('s-own').textContent = 'n/a'; }
+
+    let trade = null;
+    if (side === 'buy') {
+      const buy = toBuy(Number($('pg-buy').value));
+      $('pg-buy-v').textContent = n(buy, buy < 1 ? 3 : 2) + ' SOL';
+      $('pg-cli').textContent = cli(p, raised, buy, sp);
+      if (s.complete) blank('the curve is complete, nothing left to buy');
+      else {
+        const b = c.buy(buy.toFixed(9));
+        trade = { from: raised, to: Math.min(gs.solToGraduate, raised + b.solNet) };
+        $('s-after').textContent = n(b.marketCapAfter) + ' SOL';
+        $('s-after2').textContent = u(b.marketCapAfter) || 'price ' + sgn(b.priceChangePct);
+        const imp = $('s-imp');
+        imp.textContent = sgn(b.priceImpactPct);
+        imp.className = b.priceImpactPct > 15 ? 'down' : '';
+        $('s-out').textContent = fx(b.tokensOut / 1e6, 2) + 'M';
+        $('s-out2').textContent = fx(b.supplyPct, 3) + '% of supply' + (b.capped ? ', capped where it bonds' : '');
+        $('s-avg').textContent = fx(b.avgPrice * 1e6, 4) + ' SOL';
+        const pa = $('s-pafter');
+        pa.textContent = sgn(b.priceChangePct);
+        pa.className = 'up';
+      }
+    } else {
+      const want = toSell(Number($('pg-sell').value)) * 1e6;
+      const tokens = Math.min(want, s.tokensSold);
+      $('pg-sell-v').textContent = n(tokens / 1e6, tokens < 1e6 ? 3 : 2) + 'M';
+      $('pg-cli').textContent = cli(p, raised, Math.max(1, tokens), sp);
+      if (tokens < 1) blank(live ? 'nothing has been bought on this curve yet' : 'nothing bought yet at this point, move SOL raised up');
+      else {
+        const r = c.sell(tokens.toFixed(6));
+        trade = { from: Math.max(0, raised - r.solGross), to: raised, sell: true };
+        $('s-after').textContent = n(r.marketCapAfter) + ' SOL';
+        $('s-after2').textContent = u(r.marketCapAfter) || 'price ' + sgn(r.priceChangePct);
+        const imp = $('s-imp');
+        imp.textContent = sgn(-r.priceImpactPct);
+        imp.className = r.priceImpactPct > 15 ? 'down' : '';
+        $('s-out').textContent = fx(r.solOut, r.solOut < 1 ? 4 : 3) + ' SOL';
+        $('s-out2').textContent = (sp ? usd(r.solOut * sp) + ', ' : '') + 'fee ' + fx(r.fee, 4) + ' SOL' + (want > s.tokensSold ? ', capped at tokens sold' : '');
+        $('s-avg').textContent = fx(r.avgPrice * 1e6, 4) + ' SOL';
+        const pa = $('s-pafter');
+        pa.textContent = sgn(r.priceChangePct);
+        pa.className = 'down';
+      }
+    }
+    draw(base, raised, c, trade);
+  }
+
+  function draw(base, raised, c, trade) {
+    const svg = $('pg-svg');
+    const box = svg.getBoundingClientRect();
+    const W = Math.max(300, Math.round(box.width || 760)), H = Math.max(200, Math.round(box.height || 390)), m = { l: 52, r: 24, t: 20, b: 32 };
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const pts = M.chartPoints(base, 90);
+    const xMax = pts[pts.length - 1].raised, yMax = pts[pts.length - 1].price * 1.12;
+    const X = (v) => m.l + (Math.min(v, xMax) / xMax) * (W - m.l - m.r);
+    const Y = (v) => m.t + (H - m.t - m.b) * (1 - Math.min(v, yMax) / yMax);
+    const path = pts.map((p, i) => (i ? 'L' : 'M') + X(p.raised).toFixed(1) + ',' + Y(p.price).toFixed(1)).join('');
+    const pr = (r) => { const vs = base.params.virtualSol + r; return (vs * vs) / (base.params.virtualSol * base.params.virtualTokens); };
+    let bandPath = '';
+    if (trade && trade.to > trade.from) {
+      const seg = pts.filter((p) => p.raised > trade.from && p.raised < trade.to);
+      const band = [[trade.from, pr(trade.from)], ...seg.map((p) => [p.raised, p.price]), [trade.to, pr(trade.to)]];
+      bandPath = band.map(([x, y], i) => (i ? 'L' : 'M') + X(x).toFixed(1) + ',' + Y(y).toFixed(1)).join('') + `L${X(trade.to).toFixed(1)},${Y(0)}L${X(trade.from).toFixed(1)},${Y(0)}Z`;
+    }
+    let grid = '';
+    for (let i = 0; i <= 4; i++) {
+      const v = (yMax * i) / 4;
+      grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#FFFFFF" stroke-opacity="${i ? '.06' : '.14'}"/><text x="${m.l - 10}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${i ? (v * 1e6).toFixed(2) : '0'}</text>`;
+    }
+    const step = (xMax > 60 ? 10 : xMax > 25 ? 5 : 2) * (W < 600 ? 2 : 1);
+    for (let v = 0; v <= xMax + 1e-9; v += step) {
+      grid += `<line x1="${X(v).toFixed(1)}" x2="${X(v).toFixed(1)}" y1="${m.t}" y2="${H - m.b}" stroke="#FFFFFF" stroke-opacity=".04"/>`;
+      if (v % (step * 2) === 0 && X(v) < W - m.r - 90) grid += `<text x="${X(v).toFixed(1)}" y="${H - 10}" text-anchor="middle">${v}</text>`;
+    }
+    const gx = X(xMax), gy = Y(pts[pts.length - 1].price);
+    const nx = X(raised), ny = Y(live ? c.price : pr(raised));
+    const tag = live ? 'you are here' : '';
+    const tagRight = nx < W - 160;
+    const tagEl = tag ? `<text x="${(tagRight ? nx + 12 : nx - 12).toFixed(1)}" y="${(ny - 12).toFixed(1)}" text-anchor="${tagRight ? 'start' : 'end'}" style="fill:#EAF5EC">${tag}</text>` : '';
+    $('pg-svg').innerHTML = `
+      <defs><linearGradient id="pgf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#B6F23A" stop-opacity=".16"/><stop offset="1" stop-color="#B6F23A" stop-opacity="0"/></linearGradient></defs>
+      ${grid}
+      <path d="${path}L${X(xMax)},${Y(0)}L${X(0)},${Y(0)}Z" fill="url(#pgf)"/>
+      ${bandPath ? `<path d="${bandPath}" fill="${trade.sell ? '#FF6B5B' : '#B6F23A'}" fill-opacity="${trade.sell ? '.28' : '.30'}"/>` : ''}
+      <path d="${path}" fill="none" stroke="#B6F23A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${ny.toFixed(1)}" y2="${H - m.b}" stroke="#EAF5EC" stroke-opacity=".35" stroke-dasharray="3 3"/>
+      <circle cx="${gx}" cy="${gy}" r="7" fill="#0B1F14" stroke="#B6F23A" stroke-width="2"/>
+      <text x="${gx - 14}" y="${gy + 4}" text-anchor="end" style="fill:#B6F23A">bonds at ${n(xMax, 2)} SOL</text>
+      ${live ? `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="11" fill="#EAF5EC" fill-opacity=".14"/>` : ''}
+      <circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="5" fill="#EAF5EC" stroke="#0B1F14" stroke-width="2"/>
+      ${tagEl}
+      <text x="${W - m.r}" y="${H - 10}" text-anchor="end">SOL raised</text>`;
+  }
+
+  window.rampPlayground = {
+    /** Pin the playground to on-chain reserves. BigInt (or numeric string) base units, supply in whole tokens. */
+    setLive(l) {
+      live = { virtualSol: BigInt(l.virtualSol), virtualTokens: BigInt(l.virtualTokens), realTokens: BigInt(l.realTokens), supply: Number(l.supply) || P.supply, mint: l.mint, rpc: l.rpc };
+      if (l.solPrice) $('pg-solusd').value = String(Math.round(l.solPrice * 100) / 100);
+      update();
+    },
+    clearLive() { live = null; update(); },
+    isLive: () => !!live,
+    setSide,
+  };
+
+  let rw = 0;
+  window.addEventListener('resize', () => { if (window.innerWidth !== rw) { rw = window.innerWidth; update(); } });
+  update();
+})();
+
+</script>
+<script>
+document.getElementById('copy').addEventListener('click', async function () {
+  try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); this.textContent = 'Copied'; }
+  catch (e) { this.textContent = 'Select it'; }
+  setTimeout(() => { this.textContent = 'Copy'; }, 1500);
+});
+</script>
+<script type="module" src="app.js"></script>
+<script src="site.js" defer></script>
+</body>
+</html>

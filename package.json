@@ -1,0 +1,50 @@
+{
+  "name": "ramp-cli",
+  "version": "1.1.0",
+  "description": "ramp: pump.fun curve math. know when it bonds. Exact buy and sell quotes, dev-buy planner, seeded launch sim, bundle math, live mode, MCP server and local dashboard. Zero dependencies.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./math": "./src/math.js"
+  },
+  "bin": {
+    "ramp": "./bin/ramp.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets/fonts"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "build:docs": "node scripts/build-docs.mjs",
+    "build:assets": "node scripts/build-assets.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ramp",
+    "bonding-curve",
+    "pump.fun",
+    "pumpfun",
+    "solana",
+    "launchpad",
+    "memecoin",
+    "amm",
+    "constant-product",
+    "monte-carlo",
+    "mcp",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/ramp.git"
+  },
+  "homepage": "https://github.com/OWNER/ramp#readme",
+  "bugs": {
+    "url": "https://github.com/OWNER/ramp/issues"
+  }
+}

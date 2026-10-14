@@ -1,0 +1,14 @@
+{
+  "framework": null,
+  "installCommand": "echo skip",
+  "buildCommand": "echo skip",
+  "outputDirectory": "docs",
+  "functions": {
+    "api/rpc.js": {
+      "maxDuration": 30
+    }
+  },
+  "github": {
+    "silent": true
+  }
+}

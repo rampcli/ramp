@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Archivo"; src: url("fonts/archivo-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/dm-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/dm-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+*{box-sizing:border-box}html,body{margin:0}
+body{width:1280px;height:640px;background:#0B1F14;color:#EAF5EC;font-family:Archivo,system-ui,sans-serif;position:relative;overflow:hidden}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:64px 64px;background-position:-1px -1px}
+.left{position:absolute;left:88px;top:88px;width:560px}
+.icon{display:block;width:152px;height:152px;border-radius:22%}
+.word{margin:28px 0 0;font-size:132px;font-weight:800;letter-spacing:-.045em;line-height:.8}
+.pitch{margin:28px 0 32px;font-size:30px;line-height:1.25;font-weight:700;letter-spacing:-.02em;color:#8AA394}
+.pitch b{color:#EAF5EC;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:12px;height:48px;padding:0 18px;font:400 17px "DM Mono",monospace;background:#0D2318;border:1px solid #2A4434;border-radius:10px}
+.chip i{font-style:normal;color:#5E7A69}
+.card{position:absolute;right:88px;top:88px;width:460px;background:#10291B;border:1px solid #1E3A2A;border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:700}
+.top span{font:400 12px "DM Mono",monospace;color:#8AA394;border:1px solid #1E3A2A;border-radius:6px;padding:4px 8px;font-weight:400}
+.big{font:400 44px/1 "DM Mono",monospace;letter-spacing:-.03em}
+.big small{font-size:16px;color:#8AA394;letter-spacing:0}
+.sub{margin-top:8px;font:400 13px "DM Mono",monospace;color:#8AA394}
+svg{display:block;width:100%;height:auto}
+.prow{display:flex;justify-content:space-between;font-size:12px;color:#8AA394;margin-bottom:8px}.prow b{font:400 12px "DM Mono",monospace;color:#EAF5EC}
+.bar{height:6px;border-radius:3px;background:#163523}.bar i{display:block;height:100%;border-radius:3px;background:#B6F23A;width:67.65%}
+.rows{border-top:1px solid #1E3A2A;padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.kv{display:flex;justify-content:space-between;font-size:14px;color:#8AA394;font-weight:500}.kv b{font:400 14px "DM Mono",monospace;color:#EAF5EC}.kv b.k{color:#B6F23A}
+</style></head><body><div class="grid"></div>
+<div class="left"><img class="icon" src="icon.png" alt="">
+<h1 class="word">ramp</h1>
+<p class="pitch">pump.fun curve math.<br><b>know when it bonds.</b></p>
+<span class="chip"><i>$</i>npx ramp-cli plan --own 5%</span></div>
+<div class="card">
+<div class="top">example coin, 30 SOL raised<span>example data</span></div>
+<div><div class="big">111.84 <small>SOL mcap</small></div><div class="sub">$16,775 at $150 SOL</div></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 392 150" role="img" aria-label="Price vs SOL raised, launch to bond">
+<defs><linearGradient id="mf392x150" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B6F23A" stop-opacity="0.18"/><stop offset="1" stop-color="#B6F23A" stop-opacity="0"/></linearGradient></defs>
+<line x1="10" x2="382" y1="140.0" y2="140.0" stroke="#2A4434"/><line x1="10" x2="382" y1="107.5" y2="107.5" stroke="#1A3324"/><line x1="10" x2="382" y1="75.0" y2="75.0" stroke="#1A3324"/><line x1="10" x2="382" y1="42.5" y2="42.5" stroke="#1A3324"/><line x1="10" x2="382" y1="10.0" y2="10.0" stroke="#1A3324"/><line x1="72.0" x2="72.0" y1="10" y2="140" stroke="#1A3324"/><line x1="134.0" x2="134.0" y1="10" y2="140" stroke="#1A3324"/><line x1="196.0" x2="196.0" y1="10" y2="140" stroke="#1A3324"/><line x1="258.0" x2="258.0" y1="10" y2="140" stroke="#1A3324"/><line x1="320.0" x2="320.0" y1="10" y2="140" stroke="#1A3324"/>
+<path d="M10.0,132.0L14.7,131.4L19.4,130.8L24.1,130.1L28.8,129.5L33.5,128.8L38.3,128.1L43.0,127.4L47.7,126.7L52.4,125.9L57.1,125.2L61.8,124.4L66.5,123.5L71.2,122.7L75.9,121.9L80.6,121.0L85.3,120.1L90.1,119.2L94.8,118.2L99.5,117.3L104.2,116.3L108.9,115.3L113.6,114.3L118.3,113.2L123.0,112.2L127.7,111.1L132.4,110.0L137.1,108.8L141.8,107.7L146.6,106.5L151.3,105.3L156.0,104.1L160.7,102.9L165.4,101.7L170.1,100.4L174.8,99.1L179.5,97.8L184.2,96.5L188.9,95.1L193.6,93.7L198.4,92.3L203.1,90.9L207.8,89.5L212.5,88.0L217.2,86.5L221.9,85.0L226.6,83.5L231.3,82.0L236.0,80.4L240.7,78.9L245.4,77.3L250.2,75.6L254.9,74.0L259.6,72.3L264.3,70.6L269.0,68.9L273.7,67.2L278.4,65.5L283.1,63.7L287.8,61.9L292.5,60.1L297.2,58.3L301.9,56.4L306.7,54.6L311.4,52.7L316.1,50.8L320.8,48.8L325.5,46.9L330.2,44.9L334.9,42.9L339.6,40.9L344.3,38.8L349.0,36.8L353.7,34.7L358.5,32.6L363.2,30.5L367.9,28.4L372.6,26.2L377.3,24.0L382.0,21.8L382.0,140.0L10.0,140.0Z" fill="url(#mf392x150)"/>
+<path d="M10.0,132.0L14.7,131.4L19.4,130.8L24.1,130.1L28.8,129.5L33.5,128.8L38.3,128.1L43.0,127.4L47.7,126.7L52.4,125.9L57.1,125.2L61.8,124.4L66.5,123.5L71.2,122.7L75.9,121.9L80.6,121.0L85.3,120.1L90.1,119.2L94.8,118.2L99.5,117.3L104.2,116.3L108.9,115.3L113.6,114.3L118.3,113.2L123.0,112.2L127.7,111.1L132.4,110.0L137.1,108.8L141.8,107.7L146.6,106.5L151.3,105.3L156.0,104.1L160.7,102.9L165.4,101.7L170.1,100.4L174.8,99.1L179.5,97.8L184.2,96.5L188.9,95.1L193.6,93.7L198.4,92.3L203.1,90.9L207.8,89.5L212.5,88.0L217.2,86.5L221.9,85.0L226.6,83.5L231.3,82.0L236.0,80.4L240.7,78.9L245.4,77.3L250.2,75.6L254.9,74.0L259.6,72.3L264.3,70.6L269.0,68.9L273.7,67.2L278.4,65.5L283.1,63.7L287.8,61.9L292.5,60.1L297.2,58.3L301.9,56.4L306.7,54.6L311.4,52.7L316.1,50.8L320.8,48.8L325.5,46.9L330.2,44.9L334.9,42.9L339.6,40.9L344.3,38.8L349.0,36.8L353.7,34.7L358.5,32.6L363.2,30.5L367.9,28.4L372.6,26.2L377.3,24.0L382.0,21.8" fill="none" stroke="#B6F23A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<line x1="141.3" x2="141.3" y1="107.8" y2="140.0" stroke="#EAF5EC" stroke-opacity="0.35" stroke-dasharray="3 3"/>
+<circle cx="382.0" cy="21.8" r="6" fill="#0B1F14" stroke="#B6F23A" stroke-width="2"/>
+<circle cx="141.3" cy="107.8" r="5" fill="#EAF5EC" stroke="#0B1F14" stroke-width="2"/>
+</svg>
+<div><div class="prow"><span>Bonding progress</span><b>67.65%</b></div><div class="bar"><i></i></div></div>
+<div class="rows"><div class="kv"><span>Buy 1 SOL, you get</span><b class="k">8.71M</b></div><div class="kv"><span>SOL left until it bonds</span><b>55.56 SOL</b></div><div class="kv"><span>Mcap when it bonds</span><b>410.88 SOL</b></div></div>
+</div>
+</body></html>

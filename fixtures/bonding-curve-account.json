@@ -1,0 +1,15 @@
+{
+  "note": "Synthetic BondingCurve account (not from mainnet): 20 SOL raised on default Pump.fun parameters. 81 bytes, includes creator.",
+  "mint": "So11111111111111111111111111111111111111112",
+  "curve": "RampCurveFixture111111111111111111111111111",
+  "base64": "F7f4N2DYrGAAcE5eiEkCAAB0O6QLAAAAANg7EvdKAQAAyBeoBAAAAACAxqR+jQMAADqGXmnuD1SAyrz2Y1fk3C8Y1Y1Fwep0ifs3I9l5PHKm",
+  "expected": {
+    "virtualTokenReserves": "643800000000000",
+    "virtualSolReserves": "50000000000",
+    "realTokenReserves": "363900000000000",
+    "realSolReserves": "20000000000",
+    "tokenTotalSupply": "1000000000000000",
+    "complete": false,
+    "creator": "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf"
+  }
+}

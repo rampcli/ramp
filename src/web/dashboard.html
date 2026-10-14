@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ramp dashboard</title>
+<meta name="theme-color" content="#0B1F14">
+<link rel="icon" href="data:image/svg+xml,{{favicon}}">
+<style>
+/*{{fonts}}*/
+/*{{css}}*/
+.top { position: sticky; top: 0; z-index: 5; background: rgba(11, 31, 20, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1360px; margin: 0 auto; height: 56px; padding: 0 var(--s5); display: flex; align-items: center; gap: var(--s5); }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 800 20px/1 var(--sans); letter-spacing: -.03em; }
+.brand:hover { text-decoration: none; }
+.tabs { display: flex; gap: var(--s1); height: 100%; }
+.tabs a { display: flex; align-items: center; padding: 0 var(--s3); color: var(--muted); font: 500 14px var(--sans); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a:hover { color: var(--text); text-decoration: none; }
+.tabs a.on { color: var(--text); border-bottom-color: var(--accent); }
+.grow { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: var(--s2); height: 28px; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--r-sm); font: 400 12px var(--mono); color: var(--muted); white-space: nowrap; max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+main { max-width: 1360px; margin: 0 auto; padding: var(--s6) var(--s5) var(--s7); }
+section { scroll-margin-top: 72px; }
+section + section { margin-top: var(--s7); }
+.sec { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4); margin-bottom: var(--s4); flex-wrap: wrap; }
+.sec h2 { font-size: 22px; letter-spacing: -.02em; }
+.sec p { margin: 0; color: var(--muted); font-size: 14px; }
+.split { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--s4); align-items: start; }
+.controls { padding: var(--s5); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s3); }
+.controls .full { grid-column: 1 / -1; }
+.controls .btn { width: 100%; }
+.results { min-width: 0; display: flex; flex-direction: column; gap: var(--s4); position: relative; }
+.results .cells { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.results .cell > b { font-size: 28px; }
+.loading-line { position: absolute; left: 0; right: 0; top: -9px; height: 2px; border-radius: 1px; overflow: hidden; opacity: 0; transition: opacity .15s; }
+.loading-line::after { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; background: var(--accent); animation: slide 1s linear infinite; }
+@keyframes slide { from { left: -30%; } to { left: 100%; } }
+.is-loading .loading-line { opacity: 1; }
+.is-loading .cells, .is-loading .charts { opacity: .45; transition: opacity .15s; }
+.empty { padding: var(--s6); border: 1px dashed var(--line-2); border-radius: var(--r); color: var(--muted); font-size: 14px; text-align: left; }
+.empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: var(--s1); }
+.alert { display: none; padding: var(--s3) var(--s4); border: 1px solid rgba(255, 107, 91, .4); background: rgba(255, 107, 91, .08); border-radius: var(--r); color: var(--down); font: 400 13px var(--mono); }
+.alert.show { display: block; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+.chart { padding: var(--s4) var(--s4) var(--s3); min-width: 0; }
+.chart h3 { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.chart p { margin: var(--s1) 0 var(--s3); color: var(--muted); font: 400 12px var(--mono); }
+.bundle-out { padding: var(--s5); min-width: 0; display: flex; flex-direction: column; gap: var(--s4); }
+.bundle-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s5); }
+.bundle-nums span { display: block; font-size: 12px; color: var(--muted); }
+.bundle-nums b { display: block; margin-top: var(--s2); font: 400 32px/1 var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bundle-nums b.key { color: var(--accent); }
+.bundle-note { margin: 0; color: var(--muted); font-size: 13px; max-width: 72ch; }
+footer { max-width: 1360px; margin: 0 auto; padding: var(--s5); border-top: 1px solid var(--line); color: var(--muted); font: 400 12px var(--mono); display: flex; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+@media (max-width: 1080px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .top-in { padding: 0 var(--s4); gap: var(--s3); }
+  .tabs a { padding: 0 var(--s2); font-size: 13px; }
+  .top .pill { display: none; }
+  main { padding: var(--s5) var(--s4) var(--s7); }
+  .controls { padding: var(--s4); }
+  .results .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .results .cell > b { font-size: 22px; }
+  .charts { grid-template-columns: minmax(0, 1fr); }
+  .bundle-out { padding: var(--s4); }
+  .bundle-nums { gap: var(--s3); }
+  .bundle-nums b { font-size: 20px; }
+  footer { padding: var(--s4); }
+}
+@media (max-width: 359px) {
+  .brand span { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#curve">{{mark}}<span>ramp</span></a>
+    <nav class="tabs" aria-label="Sections"><a href="#curve" class="on">Curve</a><a href="#sim">Simulator</a><a href="#bundle">Bundle</a></nav>
+    <span class="grow"></span>
+    <span class="pill" title="Curve source"><i class="dot"></i><span id="chip">preset pumpfun</span></span>
+    <span class="pill">v{{version}}</span>
+  </div>
+</header>
+
+<main>
+  <section id="curve">
+    <div class="sec"><h2>Curve</h2><p>Exact constant-product math, the same module the CLI runs.</p></div>
+    <div id="playground"></div>
+  </section>
+
+  <section id="sim">
+    <div class="sec"><h2>Launch simulator</h2><p>Seeded Monte Carlo: dev buy and snipers in slot one, then random buys and sells.</p></div>
+    <div class="split">
+      <form class="controls panel" id="simform" novalidate>
+        <label class="field"><span>Runs</span><input name="runs" type="number" min="1" max="20000" value="200"></label>
+        <label class="field"><span>Seed</span><input name="seed" type="text" value="1"></label>
+        <label class="field"><span>Snipers</span><input name="snipers" type="number" min="0" max="200" value="5"></label>
+        <label class="field"><span>Sniper SOL (list)</span><input name="sniperSol" type="text" value="1"></label>
+        <label class="field"><span>Dev buy (SOL)</span><input name="devBuy" type="number" min="0" step="0.1" value="1"></label>
+        <label class="field"><span>Sell share</span><input name="sellRatio" type="number" min="0" max="0.95" step="0.01" value="0.35"></label>
+        <label class="field"><span>Max trades</span><input name="maxTrades" type="number" min="1" value="1000"></label>
+        <label class="field"><span>Bond within (trades)</span><input name="within" type="number" min="1" value="500"></label>
+        <button class="btn btn-primary full" type="submit" id="runbtn">Run simulation</button>
+        <p class="status full" id="simstatus" role="status" aria-live="polite"></p>
+      </form>
+      <div class="results" id="results">
+        <div class="loading-line" aria-hidden="true"></div>
+        <div class="alert" id="simerr" role="alert"></div>
+        <div id="simbody">
+          <div class="empty"><b>No runs yet</b>Set the inputs and run the simulation. Same seed, same result.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="bundle">
+    <div class="sec"><h2>Bundle check</h2><p>Same SOL, bundled in the launch slot vs spread out over time.</p></div>
+    <div class="split">
+      <form class="controls panel" onsubmit="return false">
+        <label class="field"><span>Wallets</span><input id="b-w" type="number" min="1" max="60" value="8"></label>
+        <label class="field"><span>SOL each</span><input id="b-e" type="number" min="0.01" step="any" value="0.5"></label>
+        <label class="field full"><span>Other buys between spread wallets (SOL)</span><input id="b-g" type="number" min="0" step="0.5" value="2"></label>
+        <p class="status err full" id="berr" role="status" aria-live="polite"></p>
+      </form>
+      <div class="bundle-out panel">
+        <div class="bundle-nums">
+          <div><span>Bundled</span><b class="key" id="bn-b">0%</b></div>
+          <div><span>Spread</span><b id="bn-s">0%</b></div>
+          <div><span>Concentration</span><b id="bn-c">0x</b></div>
+        </div>
+        <svg id="bsvg" class="chart-svg" viewBox="0 0 760 220" role="img" aria-label="Share of supply per wallet, bundled vs spread"></svg>
+        <div class="legend"><span><i style="background:var(--accent)"></i>bundled, % of supply</span><span><i style="background:var(--muted)"></i>spread, % of supply</span></div>
+        <p class="bundle-note" id="bnote"></p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer><span>runs on your machine. numbers are model output, not financial advice.</span><span id="src"></span></footer>
+<script>
+/*{{boot}}*/
+/*{{math}}*/
+</script>
+<script>
+/*{{playground}}*/
+</script>
+<script>
+(function () {
+  const boot = window.RAMP_BOOT || {};
+  const $ = (id) => document.getElementById(id);
+  const n = (v, d = 2) => (v === null || v === undefined ? 'n/a' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d }));
+  const fx = (v, d) => Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  $('chip').textContent = boot.source || 'preset pumpfun';
+  $('src').textContent = (boot.source || 'preset pumpfun') + ', SOL $' + (boot.solPrice ?? 150);
+
+  // tabs follow the scroll position
+  const tabs = [...document.querySelectorAll('.tabs a')];
+  const secs = tabs.map((a) => document.querySelector(a.getAttribute('href')));
+  const onScroll = () => {
+    let i = 0;
+    secs.forEach((s, k) => { if (s.getBoundingClientRect().top < 140) i = k; });
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) i = secs.length - 1;
+    tabs.forEach((a, k) => a.classList.toggle('on', k === i));
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  const cell = (label, value, sub, cls) => `<div class="cell"><span>${label}</span><b class="${cls || ''}">${value}</b><small>${sub || ''}</small></div>`;
+
+  function histo(values, lo, hi, bins, fmt, color) {
+    const h = M.histogram(values, bins, lo, hi);
+    const W = 440, H = 200, m = { l: 34, r: 8, t: 8, b: 26 };
+    const max = Math.max(1, ...h.map((b) => b.count));
+    const bw = (W - m.l - m.r) / bins;
+    let out = '';
+    for (let i = 0; i <= 3; i++) {
+      const y = m.t + (H - m.t - m.b) * (1 - i / 3);
+      out += `<line x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}" stroke="#FFFFFF" stroke-opacity="${i ? '.06' : '.14'}"/><text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${Math.round((max * i) / 3)}</text>`;
+    }
+    h.forEach((b, i) => {
+      const bh = ((H - m.t - m.b) * b.count) / max;
+      out += `<rect x="${(m.l + i * bw + 2).toFixed(1)}" y="${(H - m.b - bh).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${color}"><title>${fmt(b.from)} to ${fmt(b.to)}: ${b.count}</title></rect>`;
+      if (i % 2 === 0) out += `<text x="${(m.l + i * bw + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${fmt(b.from)}</text>`;
+    });
+    return `<svg class="chart-svg" viewBox="0 0 ${W} ${H}">${out}</svg>`;
+  }
+
+  function renderSim(r) {
+    const o = r.options;
+    const grads = r.samples.filter((s) => s.graduated).map((s) => s.trades);
+    $('simbody').innerHTML = `
+      <div class="cells">
+        ${cell('Bonded', fx(r.graduationRate * 100, 1) + '%', `${r.graduated} of ${r.runs} runs`, 'key')}
+        ${cell(`Bonded within ${o.within} trades`, fx(r.graduatedWithin.probability * 100, 1) + '%', 'probability')}
+        ${cell('Trades to bond, median', n(r.tradesToGraduate.p50, 0), `p10 ${n(r.tradesToGraduate.p10, 0)}, p90 ${n(r.tradesToGraduate.p90, 0)}`)}
+        ${cell('Sniper share', n(r.sniperSharePct.mean) + '%', `mean, p90 ${n(r.sniperSharePct.p90)}%`, r.sniperSharePct.mean > 10 ? 'down' : '')}
+        ${cell('Dev share', n(r.devSharePct.mean) + '%', `${o.devBuy} SOL dev buy`)}
+        ${cell('Top 10 share', n(r.top10SharePct.p50) + '%', `median, p90 ${n(r.top10SharePct.p90)}%`, r.top10SharePct.p50 > 35 ? 'down' : '')}
+      </div>
+      <div class="charts" style="margin-top:16px">
+        <div class="chart panel"><h3>Trades to bond</h3><p>${grads.length} bonded runs, seed ${o.seed}</p>${grads.length ? histo(grads, 0, o.maxTrades, 10, (v) => Math.round(v), '#B6F23A') : '<div class="empty">No run bonded with these inputs.</div>'}</div>
+        <div class="chart panel"><h3>Top 10 holders, % of supply</h3><p>all runs, at bond or last trade</p>${histo(r.samples.map((s) => s.top10Pct), 0, 60, 12, (v) => Math.round(v) + '%', '#5E7A69')}</div>
+      </div>`;
+    $('simstatus').textContent = `${r.runs} runs, seed ${o.seed}`;
+  }
+
+  $('simform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = new URLSearchParams(new FormData(e.target));
+    const fee = document.getElementById('pg-fee');
+    if (fee) q.set('fee', fee.value);
+    const btn = $('runbtn');
+    btn.disabled = true;
+    btn.textContent = 'Running';
+    $('results').classList.add('is-loading');
+    $('simerr').classList.remove('show');
+    $('simstatus').textContent = 'running ' + (q.get('runs') || 200) + ' launches';
+    try {
+      const res = await fetch('/api/simulate?' + q.toString());
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || res.statusText);
+      renderSim(body);
+    } catch (err) {
+      $('simerr').textContent = err.message;
+      $('simerr').classList.add('show');
+      $('simstatus').textContent = '';
+    }
+    $('results').classList.remove('is-loading');
+    btn.disabled = false;
+    btn.textContent = 'Run simulation';
+  });
+
+  function bundle() {
+    try {
+      const fee = document.getElementById('pg-fee');
+      const c = new M.Curve(Object.assign({}, M.DEFAULTS, boot.params || {}, fee ? { fee: Number(fee.value) } : {}));
+      const r = M.bundleCompare(c, Number($('b-w').value), Number($('b-e').value), { gapSol: Number($('b-g').value) });
+      const svg = $('bsvg');
+      const W = Math.max(300, Math.round(svg.getBoundingClientRect().width || 760)), H = W < 600 ? 180 : 220, m = { l: 40, r: 8, t: 12, b: 30 };
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      const rows = Math.max(r.bundled.rows.length, r.spread.rows.length);
+      const max = Math.max(...r.bundled.rows.map((x) => x.supplyPct), 0.1) * 1.15;
+      const gw = (W - m.l - m.r) / rows;
+      const bw = Math.min(22, gw / 2 - 3);
+      let out = '';
+      for (let i = 0; i <= 3; i++) {
+        const v = (max * i) / 3, y = m.t + (H - m.t - m.b) * (1 - i / 3);
+        out += `<line x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}" stroke="#FFFFFF" stroke-opacity="${i ? '.06' : '.14'}"/><text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${v.toFixed(1)}</text>`;
+      }
+      for (let i = 0; i < rows; i++) {
+        const cx = m.l + gw * i + gw / 2;
+        [[r.bundled.rows[i], '#B6F23A', -bw - 1], [r.spread.rows[i], '#5E7A69', 1]].forEach(([row, col, dx]) => {
+          if (!row) return;
+          const bh = ((H - m.t - m.b) * row.supplyPct) / max;
+          out += `<rect x="${(cx + dx).toFixed(1)}" y="${(H - m.b - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${col}"/>`;
+        });
+        if (rows <= (W < 600 ? 10 : 20) || i % 2 === 0) out += `<text x="${cx.toFixed(1)}" y="${H - 10}" text-anchor="middle">#${i + 1}</text>`;
+      }
+      $('bsvg').innerHTML = out;
+      $('bn-b').textContent = fx(r.bundled.supplyPct, 2) + '%';
+      $('bn-s').textContent = fx(r.spread.supplyPct, 2) + '%';
+      $('bn-c').textContent = fx(r.concentration, 2) + 'x';
+      $('bnote').textContent = `${r.bundled.rows.length} wallets grab ${fx(r.concentration, 2)}x the supply in the launch slot vs the same buys spread out. No bundled wallet tops ${fx(r.bundled.largestWalletPct, 2)}%, so a per-wallet holder alert can miss the combined ${fx(r.bundled.supplyPct, 2)}%.`;
+      $('berr').textContent = '';
+    } catch (err) { $('berr').textContent = err.message; }
+  }
+  ['b-w', 'b-e', 'b-g', 'pg-fee'].forEach((id) => { const el = $(id); if (el) el.addEventListener('input', bundle); });
+  bundle();
+  window.addEventListener('resize', bundle);
+  if (boot.sim) renderSim(boot.sim);
+})();
+</script>
+</body>
+</html>
